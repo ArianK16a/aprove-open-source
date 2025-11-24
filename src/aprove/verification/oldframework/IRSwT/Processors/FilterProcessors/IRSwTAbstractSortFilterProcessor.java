@@ -102,7 +102,7 @@ public abstract class IRSwTAbstractSortFilterProcessor extends Processor.Process
             newProblem = new IRSwTProblem(ImmutableCreator.create(newRules), irswt.getStartTerm());
         }
 
-        if (this.args.noSuccIfChanged && filter.hasChanged()) {
+        if (this.args.noSuccIfChanged && !filter.hasChanged()) {
             return ResultFactory.unsuccessful();
         }
 
