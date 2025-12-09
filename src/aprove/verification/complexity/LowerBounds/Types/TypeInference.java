@@ -5,6 +5,8 @@ import java.util.concurrent.atomic.*;
 
 import aprove.verification.complexity.LowerBounds.BasicStructures.Rule;
 import aprove.verification.dpframework.BasicStructures.*;
+import aprove.verification.dpframework.IDPProblem.PfFunctions.domains.*;
+import aprove.verification.dpframework.IDPProblem.utility.*;
 import aprove.verification.oldframework.BasicStructures.*;
 import aprove.verification.oldframework.Utility.*;
 import aprove.verification.oldframework.Utility.GenericStructures.*;
@@ -163,6 +165,7 @@ public class TypeInference {
 
         Map<TypePosition, Type> types = new LinkedHashMap<>();
         for (ImmutableSet<TypePosition> partition : partitions) {
+            Boolean isReturnTypeInteger = false;
             StringBuilder constrName = new StringBuilder();
             StringBuilder defName = new StringBuilder();
             for (TypePosition pos : partition) {
@@ -176,6 +179,9 @@ public class TypeInference {
                 } else {
                     constrName.append(f.getName()).append(":");
                 }
+                if (IDPPredefinedMap.DEFAULT_MAP.isInt(f, DomainFactory.INTEGERS) || IDPPredefinedMap.DEFAULT_MAP.isPredefined(f)) {
+                    isReturnTypeInteger = true;
+                }
             }
             String name = constrName.toString().isEmpty() ? defName.toString() : constrName.toString();
             if (!name.isEmpty()) {
@@ -185,7 +191,7 @@ public class TypeInference {
             }
             String typeName = fng.getFreshName(name, false);
             for (TypePosition pos : partition) {
-                types.put(pos, new Type(typeName));
+                types.put(pos, isReturnTypeInteger ? Type.Nats : new Type(typeName));
             }
         }
 
