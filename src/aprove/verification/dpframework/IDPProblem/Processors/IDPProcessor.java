@@ -27,6 +27,7 @@ public abstract class IDPProcessor extends Processor.ProcessorSkeleton {
      */
     protected abstract Result processIDPProblem(IDPProblem idp, Abortion aborter) throws AbortionException;
 
+    protected RuntimeInformation rti;
 
     @Override
     public Result process(BasicObligation o, BasicObligationNode oblNode, Abortion aborter, RuntimeInformation rti) throws AbortionException {
@@ -34,6 +35,7 @@ public abstract class IDPProcessor extends Processor.ProcessorSkeleton {
         if (problem.getP().isEmpty()) { // success for free!
             return ResultFactory.proved(IDPProcessor.pIsEmptyProof);
         }
+        this.rti = rti;
         // FIXME: We will probably have some simple abortion cases here
         // (cached, ...) cf. QDPProblemProcessor
         return this.processIDPProblem(problem, aborter);
