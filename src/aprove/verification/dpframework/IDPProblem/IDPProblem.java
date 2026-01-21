@@ -182,16 +182,6 @@ Immutable, HTML_Able, HasTRSTerms, ExternUsable, XMLObligationExportable,
         final StringBuilder s = new StringBuilder();
         s.append(o.export("IDP_v1 problem:"));
         s.append(o.cond_linebreak());
-        s.append("The following function symbols are pre-defined:");
-        s.append(o.cond_linebreak());
-        s.append(this.ruleAnalysis.getPreDefinedMap().export(o));
-        s.append(o.cond_linebreak());
-        s.append(o.cond_linebreak());
-        s.append("The following domains are used:");
-        s.append(o.cond_linebreak());
-        s.append(o.set(this.ruleAnalysis.getDomains(), Export_Util.NICE_SET));
-        s.append(o.cond_linebreak());
-        s.append(o.cond_linebreak());
         if (this.getR().isEmpty()) {
             s.append("R is empty.");
             s.append(o.linebreak());
