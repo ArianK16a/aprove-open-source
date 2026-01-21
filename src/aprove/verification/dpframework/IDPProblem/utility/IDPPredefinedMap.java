@@ -202,6 +202,21 @@ public class IDPPredefinedMap implements Exportable, NameProvider {
         return func != null && func.getFunc() == Func.Mod;
     }
 
+    /**
+     * Checks whether a function symbol is a predefined arithmetic function,
+     * i.e. all it's arguments are integers and the return type is integer.
+     * @param fs Function symbol to check
+     * @return
+     */
+    public boolean isArithmeticFunction(final FunctionSymbol fs) {
+        return IDPPredefinedMap.DEFAULT_MAP.isAdd(fs)
+               || IDPPredefinedMap.DEFAULT_MAP.isSub(fs)
+               || IDPPredefinedMap.DEFAULT_MAP.isUnaryMinus(fs)
+               || IDPPredefinedMap.DEFAULT_MAP.isMul(fs)
+               || IDPPredefinedMap.DEFAULT_MAP.isDiv(fs)
+               || IDPPredefinedMap.DEFAULT_MAP.isMod(fs);
+    }
+
     public boolean isLand(final FunctionSymbol fs) {
         final PredefinedFunction<? extends Domain> func = this.getPredefinedFunction(fs);
         return func != null && func.getFunc() == Func.Land;
