@@ -169,6 +169,12 @@ public class TypeInference {
             StringBuilder constrName = new StringBuilder();
             StringBuilder defName = new StringBuilder();
             for (TypePosition pos : partition) {
+                if (pos instanceof FunctionSymbolArgumentType) {
+                    FunctionSymbolArgumentType argType = (FunctionSymbolArgumentType) pos;
+                    if (IDPPredefinedMap.DEFAULT_MAP.isArithmeticFunction(argType.getFunctionSymbol())) {
+                        isReturnTypeInteger = true;
+                    }
+                }
                 if (!(pos instanceof FunctionSymbolReturnType)) {
                     continue;
                 }
@@ -179,7 +185,7 @@ public class TypeInference {
                 } else {
                     constrName.append(f.getName()).append(":");
                 }
-                if (IDPPredefinedMap.DEFAULT_MAP.isInt(f, DomainFactory.INTEGERS) || IDPPredefinedMap.DEFAULT_MAP.isPredefined(f)) {
+                if (IDPPredefinedMap.DEFAULT_MAP.isInt(f, DomainFactory.INTEGERS) || IDPPredefinedMap.DEFAULT_MAP.isArithmeticFunction(f)) {
                     isReturnTypeInteger = true;
                 }
             }
