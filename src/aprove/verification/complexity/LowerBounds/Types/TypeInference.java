@@ -166,27 +166,34 @@ public class TypeInference {
         Map<TypePosition, Type> types = new LinkedHashMap<>();
         for (ImmutableSet<TypePosition> partition : partitions) {
             Boolean isReturnTypeInteger = false;
+            Boolean isReturnTypeBoolean = false;
             StringBuilder constrName = new StringBuilder();
             StringBuilder defName = new StringBuilder();
             for (TypePosition pos : partition) {
                 if (pos instanceof FunctionSymbolArgumentType) {
                     FunctionSymbolArgumentType argType = (FunctionSymbolArgumentType) pos;
-                    if (IDPPredefinedMap.DEFAULT_MAP.isArithmeticFunction(argType.getFunctionSymbol())) {
+                    if (IDPPredefinedMap.DEFAULT_MAP.isArithmeticFunction(argType.getFunctionSymbol())
+                            || IDPPredefinedMap.DEFAULT_MAP.isIntegerRelation(argType.getFunctionSymbol())) {
                         isReturnTypeInteger = true;
                     }
                 }
                 if (!(pos instanceof FunctionSymbolReturnType)) {
                     continue;
                 }
-                FunctionSymbolTypePosition fpos = (FunctionSymbolTypePosition)pos;
+                FunctionSymbolTypePosition fpos = (FunctionSymbolTypePosition) pos;
                 FunctionSymbol f = fpos.getFunctionSymbol();
                 if (definedSymbols.contains(f)) {
 				   defName.append(f.getName()).append(":");
                 } else {
                     constrName.append(f.getName()).append(":");
                 }
-                if (IDPPredefinedMap.DEFAULT_MAP.isInt(f, DomainFactory.INTEGERS) || IDPPredefinedMap.DEFAULT_MAP.isArithmeticFunction(f)) {
+                if (IDPPredefinedMap.DEFAULT_MAP.isInt(f, DomainFactory.INTEGERS)
+                        || IDPPredefinedMap.DEFAULT_MAP.isArithmeticFunction(f)) {
                     isReturnTypeInteger = true;
+                } else if (IDPPredefinedMap.DEFAULT_MAP.isBooleanTrue(f)
+                        || IDPPredefinedMap.DEFAULT_MAP.isBooleanFalse(f)
+                        || IDPPredefinedMap.DEFAULT_MAP.isIntegerRelation(f)) {
+                    isReturnTypeBoolean = true;
                 }
             }
             String name = constrName.toString().isEmpty() ? defName.toString() : constrName.toString();
@@ -197,7 +204,15 @@ public class TypeInference {
             }
             String typeName = fng.getFreshName(name, false);
             for (TypePosition pos : partition) {
-                types.put(pos, isReturnTypeInteger ? Type.Nats : new Type(typeName));
+                if (isReturnTypeInteger && !isReturnTypeBoolean) {
+                    types.put(pos, Type.Nats);
+                } else if (isReturnTypeBoolean) {
+                    types.put(pos, Type.Bool);
+                } else if (isReturnTypeInteger) {
+                    assert false : "something is of type integer and boolean?";
+                } else {
+                    types.put(pos, new Type(typeName));                    
+                }
             }
         }
 
