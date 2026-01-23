@@ -262,6 +262,20 @@ public class IDPPredefinedMap implements Exportable, NameProvider {
         return func != null && func.getFunc() == Func.Ge;
     }
 
+
+    /**
+     * Checks whether a function symbol is a predefined relation on integers,
+     * i.e. all it's arguments are integers and the return type is boolean.
+     * @param fs Function symbol to check
+     * @return
+     */
+    public boolean isIntegerRelation(final FunctionSymbol fs) {
+        return IDPPredefinedMap.DEFAULT_MAP.isLt(fs)
+               || IDPPredefinedMap.DEFAULT_MAP.isLe(fs)
+               || IDPPredefinedMap.DEFAULT_MAP.isGt(fs)
+               || IDPPredefinedMap.DEFAULT_MAP.isGe(fs);
+    }
+
     public boolean isInt(final FunctionSymbol fs, final IntegerDomain domain) {
         return PredefinedSemanticsFactory.getIntValue(fs, domain) != null;
     }
