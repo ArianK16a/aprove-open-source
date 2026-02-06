@@ -178,7 +178,12 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
                 final Success s = (Success) execStrat;
                 final ImmutableList<BasicObligationNode> positions = s.getPositions();
 
-                if (positions.isEmpty() && !newOblNode.getTruthValue().equals(YNM.YES)) {
+                if (newOblNode.getTruthValue().equals(YNM.YES)) {
+                    final IDPRemoveIntProof proof = new IDPRemoveIntProof(iDP, filter, newOblNode, true);
+                    final ExecutableStrategy succStrategy = Success.EMPTY;
+                    return ResultFactory.provedWithNewStrategy(newOblNode, YNMImplication.SOUND, proof, succStrategy);
+                }
+                if (positions.isEmpty()) {
                     return ResultFactory.unsuccessful("Could not remove any rules!");
                 }
 
