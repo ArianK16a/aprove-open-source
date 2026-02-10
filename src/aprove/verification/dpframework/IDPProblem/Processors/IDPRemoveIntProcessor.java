@@ -197,8 +197,8 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
                     }
 
                     IIDependencyGraph newIdpGraph = iDP.getIdpGraph().restrictToNodes(newIdpNodes, YNM.MAYBE, this);
-                    final IDPProblem newIdp = IDPProblem.create(newIdpGraph, newIdpGraph.getNodeAnalysis(), iDP.getQ(),
-                            iDP.isMinimal());
+                    final IDPProblem newIdp = IDPProblem.create(newIdpGraph,
+                            new RuleAnalysis<GeneralizedRule>(idpRRules, predefinedMap), iDP.getQ(), iDP.isMinimal());
 
                     boolean done = newIdpNodes.isEmpty();
 
