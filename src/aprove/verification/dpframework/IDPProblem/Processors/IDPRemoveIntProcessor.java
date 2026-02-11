@@ -133,7 +133,12 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
             final TRSTerm newR = HelperClass.remove(r.getRight(), filter, freshNameMap, takenSymbols, predefinedMap);
 
             if (!newL.getVariables().containsAll(newR.getVariables())) {
-                return ResultFactory.unsuccessful("bound variable free after removing integer positions in " + r);
+                // if the rhs includes variables not occurring in the lhs, the
+                // rule must have the form f(x_1, ..., x_n) -> v where x_i != v
+                // because if f would occur inside another term it would also be
+                // removed due to it being an integer or boolean position of the
+                // function symbol it occurs under
+                continue;
             }
             final Rule rule = Rule.create(newL, newR);
 
