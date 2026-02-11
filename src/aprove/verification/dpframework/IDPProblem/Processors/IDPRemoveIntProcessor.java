@@ -133,7 +133,7 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
             final TRSTerm newR = HelperClass.remove(r.getRight(), filter, freshNameMap, takenSymbols, predefinedMap);
 
             if (!newL.getVariables().containsAll(newR.getVariables())) {
-                return null;
+                return ResultFactory.unsuccessful("bound variable free after removing integer positions in " + r);
             }
             final Rule rule = Rule.create(newL, newR);
 
@@ -142,7 +142,7 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
 
         final Graph<Rule, ?> qdpGraph = this.createQDPGraph(iDP, freshNameMap, takenSymbols, filter);
         if (qdpGraph == null) {
-            return null;
+            ResultFactory.unsuccessful("failed to create qdp graph from idp");
         }
 
         // Apply filter to Q terms
