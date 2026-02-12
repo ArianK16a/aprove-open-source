@@ -201,6 +201,10 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
                         newIdpNodes.add(this.inverseNodes.get(r));
                     }
 
+                    if (newIdpNodes.containsAll(iDP.getIdpGraph().getNodes())) {
+                        return ResultFactory.unsuccessful("Could not remove any rules!");
+                    }
+
                     IIDependencyGraph newIdpGraph = iDP.getIdpGraph().restrictToNodes(newIdpNodes, YNM.MAYBE, this);
                     final IDPProblem newIdp = IDPProblem.create(newIdpGraph,
                             new RuleAnalysis<GeneralizedRule>(idpRRules, predefinedMap), iDP.getQ(), iDP.isMinimal());
