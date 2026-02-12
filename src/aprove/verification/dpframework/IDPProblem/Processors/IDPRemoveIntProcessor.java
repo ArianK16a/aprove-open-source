@@ -55,7 +55,7 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
     private final int time;
     private final static Logger log = Logger
             .getLogger("aprove.DPFramework.IDPProblem.Processors.IDPRemoveIntProcessor");
-    private Map<Rule, Node> inverseNodes = new LinkedHashMap<>();
+    private CollectionMap<Rule, Node> inverseNodes = new CollectionMap<>();
 
     // ================================================================================
     // Constructors and Creators
@@ -198,7 +198,7 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
                     QDPProblem newQDP = ((QDPProblem) bo);
 
                     for (final Rule r : newQDP.getP()) {
-                        newIdpNodes.add(this.inverseNodes.get(r));
+                        newIdpNodes.addAll(this.inverseNodes.get(r));
                     }
 
                     if (newIdpNodes.containsAll(iDP.getIdpGraph().getNodes())) {
@@ -261,7 +261,7 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
                     qdpRule);
             i2qNodes.put(idpNode, qdpNode);
             qdpGraph.addNode(qdpNode);
-            this.inverseNodes.put(qdpRule, idpNode);
+            this.inverseNodes.add(qdpRule, idpNode);
         }
 
         for (final IdpEdge edge : idpEdges) {
