@@ -184,7 +184,7 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
                 final ImmutableList<BasicObligationNode> positions = s.getPositions();
 
                 if (newOblNode.getTruthValue().equals(YNM.YES)) {
-                    final IDPRemoveIntProof proof = new IDPRemoveIntProof(iDP, filter, newOblNode, true);
+                    final IDPRemoveIntProof proof = new IDPRemoveIntProof(iDP, qDP, filter, newOblNode, true);
                     final ExecutableStrategy succStrategy = Success.EMPTY;
                     return ResultFactory.provedWithNewStrategy(newOblNode, YNMImplication.SOUND, proof, succStrategy);
                 }
@@ -207,7 +207,7 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
 
                     boolean done = newIdpNodes.isEmpty();
 
-                    final IDPRemoveIntProof proof = new IDPRemoveIntProof(newIdp, filter, newOblNode, done);
+                    final IDPRemoveIntProof proof = new IDPRemoveIntProof(newIdp, qDP, filter, newOblNode, done);
 
                     if (done) {
                         newOblNode.recursiveRepropagateTruthValues();
@@ -292,14 +292,16 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
 
     public class IDPRemoveIntProof extends DefaultProof implements DOT_Able {
         private final IDPProblem idp;
+        private final QDPProblem qdp;
         private final CollectionMap<FunctionSymbol, Integer> filter;
         /** Obligation node where substrategy has been applied. */
         private final BasicObligationNode subBon;
         private final boolean done;
 
-        public IDPRemoveIntProof(final IDPProblem idp, final CollectionMap<FunctionSymbol, Integer> filter,
-                BasicObligationNode bon, boolean done) {
+        public IDPRemoveIntProof(final IDPProblem idp, final QDPProblem qdp,
+                final CollectionMap<FunctionSymbol, Integer> filter, BasicObligationNode bon, boolean done) {
             this.idp = idp;
+            this.qdp = qdp;
             this.filter = filter;
             this.subBon = bon;
             this.done = done;
@@ -315,6 +317,11 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
                         "function symbol: " + entry.getKey().getName() + ", removed positions: " + entry.getValue());
                 result.append(o.cond_linebreak());
             }
+            result.append(o.cond_linebreak());
+            result.append("Created the following QDP:");
+            result.append(o.cond_linebreak());
+            result.append(qdp);
+            result.append(o.cond_linebreak());
             if (!done) {
                 result.append("The following proof was generated: ");
                 final GenericExportManager subproof = new GenericExportManager(IDPRemoveIntProof.this.subBon,
