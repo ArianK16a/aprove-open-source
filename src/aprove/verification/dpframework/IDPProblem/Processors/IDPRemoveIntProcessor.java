@@ -321,12 +321,13 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
                         "function symbol: " + entry.getKey().getName() + ", removed positions: " + entry.getValue());
                 result.append(o.cond_linebreak());
             }
-            result.append(o.cond_linebreak());
-            result.append("Created the following QDP:");
-            result.append(o.cond_linebreak());
-            result.append(qdp);
-            result.append(o.cond_linebreak());
             if (!done) {
+                result.append(o.cond_linebreak());
+                result.append("Created the following QDP:");
+                result.append(o.cond_linebreak());
+                result.append(qdp);
+                result.append(o.cond_linebreak());
+
                 result.append("The following proof was generated: ");
                 final GenericExportManager subproof = new GenericExportManager(IDPRemoveIntProof.this.subBon,
                         "filtering result", false);
