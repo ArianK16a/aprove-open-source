@@ -147,7 +147,7 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
 
         final Graph<Rule, ?> qdpGraph = this.createQDPGraph(iDP, freshNameMap, takenSymbols, filter);
         if (qdpGraph == null) {
-            ResultFactory.unsuccessful("failed to create qdp graph from idp");
+            return ResultFactory.unsuccessful("failed to create qdp graph from idp");
         }
 
         // Apply filter to Q terms
