@@ -128,6 +128,8 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
 
         final Map<FunctionSymbol, FunctionSymbol> freshNameMap = new LinkedHashMap<FunctionSymbol, FunctionSymbol>();
 
+        Set<TRSVariable> lockedVariables = new LinkedHashSet<>();
+
         // Apply filter to R rules
         for (final GeneralizedRule r : idpRRules) {
             final TRSFunctionApplication newL = (TRSFunctionApplication) HelperClass.remove(r.getLeft(), filter,
@@ -143,7 +145,7 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
                 continue;
             }
             final Rule rule = Rule.create(newL, newR);
-
+            lockedVariables.addAll(rule.getVariables());
             rules.add(rule);
         }
 
@@ -153,43 +155,54 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
             final TRSFunctionApplication newQTerm = (TRSFunctionApplication) HelperClass.remove(origQTerm, filter,
                     freshNameMap, takenSymbols, predefinedMap);
             qTerms.add(newQTerm);
+            lockedVariables.addAll(newQTerm.getVariables());
         }
-        
+
         final IQTermSet newIqTermSet = new IQTermSet(new QTermSet(qTerms), predefinedMap);
 
         // Create new idp graph
         final Set<Node> newIdpNodes = new LinkedHashSet<>();
         final Set<IdpEdge> newIdpEdges = new LinkedHashSet<>();
+        final Set<GeneralizedRule> newIdpPRules = new LinkedHashSet<>();
         int maxNodeId = 0;
         for (final Node node : iDP.getIdpGraph().getNodes()) {
             final GeneralizedRule rule = node.getRule();
-            
+
             final TRSFunctionApplication newL = (TRSFunctionApplication) HelperClass.remove(rule.getLeft(), filter,
                     freshNameMap, takenSymbols, predefinedMap);
             final TRSTerm newR = HelperClass.remove(rule.getRight(), filter, freshNameMap, takenSymbols, predefinedMap);
 
             final Node newNode = new Node(Rule.create(newL, newR), node.id, node.loopSubstitution);
             newIdpNodes.add(newNode);
+            lockedVariables.addAll(newNode.getRule().getVariables());
+            newIdpPRules.add(newNode.getRule());
             nodeMap.put(node, newNode);
             if (node.id > maxNodeId) {
                 maxNodeId = node.id;
             }
         }
-        
+
         for (final IdpEdge edge : iDP.getIdpGraph().getEdges()) {
-            final IdpEdge newEdge = IdpEdge.create(nodeMap.get(edge.getFrom()), nodeMap.get(edge.getTo()), edge.getItpf(), this);
+            final IdpEdge newEdge = IdpEdge.create(nodeMap.get(edge.getFrom()), nodeMap.get(edge.getTo()),
+                    edge.getItpf(), this);
             newIdpEdges.add(newEdge);
         }
-        
-        final RuleAnalysis<GeneralizedRule> newRuleAnalysis = new RuleAnalysis<GeneralizedRule>(ImmutableCreator.create(rules), predefinedMap);
-        
-        final IIDependencyGraph newIdpGraph = IDependencyGraph.create(newRuleAnalysis, ImmutableCreator.create(newIdpNodes), ImmutableCreator.create(newIdpEdges), maxNodeId, null, this);
 
-        final IDPProblem newIdpProblem = IDPProblem.create(newIdpGraph, newRuleAnalysis, newIqTermSet, iDP.isMinimal());
+        final RuleAnalysis<GeneralizedRule> newPRuleAnalysis = new RuleAnalysis<GeneralizedRule>(
+                ImmutableCreator.create(newIdpPRules), predefinedMap);
+
+        final RuleAnalysis<GeneralizedRule> newRRuleAnalysis = new RuleAnalysis<GeneralizedRule>(
+                ImmutableCreator.create(rules), predefinedMap);
+
+        final IIDependencyGraph newIdpGraph = IDependencyGraph.create(newPRuleAnalysis,
+                ImmutableCreator.create(newIdpNodes), ImmutableCreator.create(newIdpEdges), maxNodeId,
+                ImmutableCreator.create(lockedVariables), this);
+
+        final IDPProblem newIdpProblem = IDPProblem.create(newIdpGraph, newRRuleAnalysis, newIqTermSet, iDP.isMinimal());
 
         return ResultFactory.proved(newIdpProblem, YNMImplication.SOUND, new IDPRemoveTermProof(newIdpProblem, filter));
 
-//        return ResultFactory.unsuccessful();
+        // return ResultFactory.unsuccessful();
     }
 
     private TrsTypes runTypeInference(final Set<GeneralizedRule> rules) {
@@ -219,6 +232,7 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
     public class IDPRemoveTermProof extends DefaultProof implements DOT_Able {
         private final IDPProblem idp;
         private final CollectionMap<FunctionSymbol, Integer> filter;
+
         /** Obligation node where substrategy has been applied. */
 
         public IDPRemoveTermProof(final IDPProblem idp, final CollectionMap<FunctionSymbol, Integer> filter) {
