@@ -78,9 +78,55 @@ public class IDPToIRSProcessor extends IDPProcessor {
     @Override
     protected Result processIDPProblem(final IDPProblem iDP, final Abortion aborter) throws AbortionException {
         final Set<IGeneralizedRule> rules = new LinkedHashSet<>();
+        int i = 0;
         for (GeneralizedRule rule : iDP.getP()) {
-            final IGeneralizedRule iRule = IGeneralizedRule.create(rule.getLeft(), rule.getRight(), null);
+            List<TRSTerm> args = new ArrayList<>();
+            TRSTerm newRight = rule.getRight();
+            TRSTerm constraint = null;
+            if (rule.getRight() instanceof TRSFunctionApplication) {
+                TRSFunctionApplication fun = (TRSFunctionApplication) rule.getRight();
+                int j = 0;
+                for (TRSTerm arg : fun.getArguments()) {
+                    if (arg instanceof TRSFunctionApplication) {
+                        TRSFunctionApplication innerFun = (TRSFunctionApplication) arg;
+                         if (IDPPredefinedMap.DEFAULT_MAP.isArithmeticFunction(innerFun.getFunctionSymbol())) {
+                             // TODO fresh variable
+                             TRSVariable freshVar = TRSTerm.createVariable("new" + i + j);
+                             args.add(freshVar);
+                             List<TRSTerm> constraintArgs = new ArrayList<>();
+                             constraintArgs.add(freshVar);
+                             constraintArgs.add(innerFun);
+                             constraint = TRSTerm.createFunctionApplication(FunctionSymbol.create("=", 2), constraintArgs);
+                             if (IDPPredefinedMap.DEFAULT_MAP.isArithmeticFunction(((TRSFunctionApplication) constraint).getFunctionSymbol())) {
+                                 
+                             }
+                         } else {
+                             // fresh variable
+                             args.add(TRSTerm.createVariable("new" + i + j));
+                         }
+                        
+                        j++;
+                    } else {
+                        args.add(arg);
+                    }
+                }
+                newRight = TRSTerm.createFunctionApplication(fun.getRootSymbol(), ImmutableCreator.create(args));
+            }
+
+//            List<TRSTerm> lArgs = new ArrayList<>();
+//            for (TRSTerm arg : rule.getLeft().getArguments()) {
+//                if (arg instanceof TRSConstantTerm) {
+//                    lArgs.add(TRSTerm.createVariable(arg.getName()));
+//                } else {
+//                    lArgs.add(arg);
+//                }
+//            }
+//            TRSFunctionApplication newLeft = TRSTerm.createFunctionApplication(rule.getLeft().getRootSymbol(), ImmutableCreator.create(lArgs));
+
+            // condition is unset, conditions in IDP are moved to the rules itself
+            final IGeneralizedRule iRule = IGeneralizedRule.create(rule.getLeft(), newRight, constraint);
             rules.add(iRule);
+            i++;
         }
         final IRSProblem irs = new IRSProblem(ImmutableCreator.create(rules));
 
@@ -124,7 +170,7 @@ public class IDPToIRSProcessor extends IDPProcessor {
         @Override
         public String export(final Export_Util o, final VerbosityLevel level) {
             StringBuilder result = new StringBuilder();
-            result.append("The following positions were removed because their type is not integer:");
+            result.append("No proof yet :(");
             result.append(o.linebreak());
             return result.toString();
         }
