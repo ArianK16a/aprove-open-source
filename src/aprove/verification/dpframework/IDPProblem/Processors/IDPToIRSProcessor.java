@@ -17,6 +17,8 @@ import aprove.DPFramework.*;
 import aprove.DPFramework.BasicStructures.*;
 import aprove.DPFramework.DPProblem.*;
 import aprove.DPFramework.IDPProblem.*;
+import aprove.DPFramework.IDPProblem.PfFunctions.*;
+import aprove.DPFramework.IDPProblem.PfFunctions.PredefinedFunction.*;
 import aprove.DPFramework.IDPProblem.PfFunctions.domains.*;
 import aprove.DPFramework.IDPProblem.PfManager.*;
 import aprove.DPFramework.IDPProblem.Processors.JBCPreprocessing.*;
@@ -25,6 +27,7 @@ import aprove.DPFramework.IDPProblem.idpGraph.Node;
 import aprove.DPFramework.IDPProblem.utility.*;
 import aprove.DPFramework.TRSProblem.*;
 import aprove.Framework.BasicStructures.*;
+import aprove.Framework.Bytecode.Processors.ToIDPv1.*;
 import aprove.Framework.IRSwT.Processors.FilterProcessors.IRSwTTempSortFilterProcessor.*;
 import aprove.Framework.IntTRS.*;
 import aprove.Framework.Logic.*;
@@ -118,25 +121,47 @@ public class IDPToIRSProcessor extends IDPProcessor {
                 ArithmeticElimination childElim = this.eliminateNestedArithmetic(arg, fng);
                 newArgs.add(childElim.replacement);
                 if (childElim.condition != null) {
-                    subConstraints.add(childElim.condition);                    
+                    subConstraints.add(childElim.condition);
                 }
             }
 
             TRSTerm constraintRhs = TRSTerm.createFunctionApplication(funApp.getRootSymbol(), newArgs);
 
-            TRSTerm constraint = TRSTerm.createFunctionApplication(FunctionSymbol.create("=", 2), var, constraintRhs);
+            TRSTerm constraint = TRSTerm.createFunctionApplication(
+                    IDPPredefinedMap.DEFAULT_MAP.getSym(PredefinedFunction.Func.Eq, DomainFactory.INTEGER_INTEGER), var,
+                    constraintRhs);
 
-            FunctionSymbol funAnd = FunctionSymbol.create("/\\", 2);
             for (TRSTerm subConstraint : subConstraints) {
-                constraint = TRSTerm.createFunctionApplication(funAnd, constraint, subConstraint);
+                constraint = IDPv2ToIDPv1Utilities.getConjunction(constraint, subConstraint);
             }
             return new ArithmeticElimination(constraint, var);
         }
 
         // >(a,b)...
         if (IDPPredefinedMap.DEFAULT_MAP.isIntegerRelation(funApp.getFunctionSymbol())) {
-            // TODO replace with constant true or false and add appropriate
+            // replace with constant true or false and add appropriate
             // condition
+
+            // the new variables used in the constraint
+            List<TRSTerm> newArgs = new ArrayList<>();
+            List<TRSTerm> subConstraints = new ArrayList<>();
+
+            for (TRSTerm arg : funApp.getArguments()) {
+                ArithmeticElimination childElim = this.eliminateNestedArithmetic(arg, fng);
+                newArgs.add(childElim.replacement);
+                if (childElim.condition != null) {
+                    subConstraints.add(childElim.condition);
+                }
+            }
+
+            TRSTerm constraint = TRSTerm.createFunctionApplication(funApp.getRootSymbol(), newArgs);
+
+            for (TRSTerm subConstraint : subConstraints) {
+                constraint = IDPv2ToIDPv1Utilities.getConjunction(constraint, subConstraint);
+            }
+
+            // TODO also add false with negated condition?
+            return new ArithmeticElimination(constraint, IDPPredefinedMap.DEFAULT_MAP.getBooleanTrue().getTerm());
         }
 
         // 6, 7,...
@@ -144,7 +169,7 @@ public class IDPToIRSProcessor extends IDPProcessor {
             return new ArithmeticElimination(null, term);
         }
 
-        return new ArithmeticElimination(term, var);
+        return new ArithmeticElimination(null, var);
     }
 
     @Override
@@ -158,7 +183,6 @@ public class IDPToIRSProcessor extends IDPProcessor {
         usedNames.addAll(CollectionUtils.getNames(CollectionUtils.getVariables(allRules)));
 
         FreshNameGenerator fng = new FreshNameGenerator(usedNames, FreshNameGenerator.APPEND_NUMBERS);
-        FunctionSymbol funAnd = FunctionSymbol.create("/\\", 2);
 
         // transform iDP to rules with no nested functions but with conditions
         for (GeneralizedRule rule : iDP.getP()) {
@@ -180,7 +204,7 @@ public class IDPToIRSProcessor extends IDPProcessor {
                     if (condition == null) {
                         condition = elim.condition;
                     } else {
-                        condition = TRSTerm.createFunctionApplication(funAnd, condition, elim.condition);
+                        condition = IDPv2ToIDPv1Utilities.getConjunction(condition, elim.condition);
                     }
 
                 }
