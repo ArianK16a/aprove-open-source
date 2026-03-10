@@ -18,6 +18,7 @@ import aprove.DPFramework.BasicStructures.*;
 import aprove.DPFramework.DPProblem.*;
 import aprove.DPFramework.IDPProblem.*;
 import aprove.DPFramework.IDPProblem.PfManager.*;
+import aprove.DPFramework.IDPProblem.Processors.IDPRemoveIntProcessor.*;
 import aprove.DPFramework.IDPProblem.Processors.JBCPreprocessing.*;
 import aprove.DPFramework.IDPProblem.idpGraph.*;
 import aprove.DPFramework.IDPProblem.idpGraph.Node;
@@ -58,6 +59,7 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
             .getLogger("aprove.DPFramework.IDPProblem.Processors.IDPRemoveTermProcessor");
     private CollectionMap<Rule, Node> inverseNodes = new CollectionMap<>();
     private Map<Node, Node> nodeMap = new LinkedHashMap<>();
+    private Map<Node, Node> inverseNodeMap = new LinkedHashMap<>();
 
     // ================================================================================
     // Constructors and Creators
@@ -177,6 +179,7 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
             lockedVariables.addAll(newNode.getRule().getVariables());
             newIdpPRules.add(newNode.getRule());
             nodeMap.put(node, newNode);
+            inverseNodeMap.put(newNode, node);
             if (node.id > maxNodeId) {
                 maxNodeId = node.id;
             }
@@ -198,11 +201,77 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
                 ImmutableCreator.create(newIdpNodes), ImmutableCreator.create(newIdpEdges), maxNodeId,
                 ImmutableCreator.create(lockedVariables), this);
 
-        final IDPProblem newIdpProblem = IDPProblem.create(newIdpGraph, newRRuleAnalysis, newIqTermSet, iDP.isMinimal());
+        final IDPProblem newIdpProblem = IDPProblem.create(newIdpGraph, newRRuleAnalysis, newIqTermSet,
+                iDP.isMinimal());
 
-        return ResultFactory.proved(newIdpProblem, YNMImplication.SOUND, new IDPRemoveTermProof(newIdpProblem, filter));
+        final BasicObligationNode newOblNode = new BasicObligationNode(newIdpProblem);
 
-        // return ResultFactory.unsuccessful();
+        final Abortion childAbortion = aborter.createChild(this.time);
+        final StrategyExecutionHandle handle = Machine.theMachine.startSubMachine(this.strategy, this.rti.getProgram(),
+                newOblNode, null, childAbortion.getClocks(), false);
+
+        try {
+            handle.waitForFinish();
+        } catch (final InterruptedException e) {
+            throw new AbortionException("IDPRemoveTermProcessor interrupted: " + e.getMessage());
+        }
+
+        if (handle.isFinished()) {
+            final ExecutableStrategy execStrat = handle.getResult();
+
+            if (execStrat != null && !execStrat.isFail() && execStrat instanceof Success) {
+                final Success s = (Success) execStrat;
+                final ImmutableList<BasicObligationNode> positions = s.getPositions();
+
+                if (newOblNode.getTruthValue().equals(YNM.YES)) {
+                    final IDPRemoveTermProof proof = new IDPRemoveTermProof(newIdpProblem, filter, newOblNode, true);
+                    final ExecutableStrategy succStrategy = Success.EMPTY;
+                    return ResultFactory.provedWithNewStrategy(newOblNode, YNMImplication.SOUND, proof, succStrategy);
+                }
+                if (positions.isEmpty()) {
+                    return ResultFactory.unsuccessful("Could not remove any rules!");
+                }
+
+                final LinkedHashSet<Node> resultingIdpNodes = new LinkedHashSet<>();
+                for (final BasicObligationNode bon : positions) {
+                    final BasicObligation bo = bon.getBasicObligation();
+                    IDPProblem idpWithoutTerms = ((IDPProblem) bo);
+
+                    for (final Node n : idpWithoutTerms.getIdpGraph().getNodes()) {
+                        resultingIdpNodes.addAll(this.inverseNodes.get(n));
+                    }
+
+                    if (resultingIdpNodes.containsAll(iDP.getIdpGraph().getNodes())) {
+                        return ResultFactory.unsuccessful("Could not remove any rules!");
+                    }
+
+                    IIDependencyGraph resultingIdpGraph = iDP.getIdpGraph().restrictToNodes(resultingIdpNodes,
+                            YNM.MAYBE, this);
+                    final IDPProblem newIdp = IDPProblem.create(resultingIdpGraph,
+                            new RuleAnalysis<GeneralizedRule>(idpRRules, predefinedMap), iDP.getQ(), iDP.isMinimal());
+
+                    boolean done = resultingIdpNodes.isEmpty();
+
+                    final IDPRemoveTermProof proof = new IDPRemoveTermProof(newIdp, filter, newOblNode, done);
+
+                    if (done) {
+                        newOblNode.recursiveRepropagateTruthValues();
+                        final ExecutableStrategy succStrategy = Success.EMPTY;
+                        return ResultFactory.provedWithNewStrategy(newOblNode, YNMImplication.SOUND, proof,
+                                succStrategy);
+
+                    } else {
+                        return ResultFactory.proved(newIdp, YNMImplication.SOUND, proof);
+                    }
+
+                }
+            }
+        }
+
+        // return ResultFactory.proved(newIdpProblem, YNMImplication.SOUND, new
+        // IDPRemoveTermProof(newIdpProblem, filter, newOblNode, false));
+
+        return ResultFactory.unsuccessful();
     }
 
     private TrsTypes runTypeInference(final Set<GeneralizedRule> rules) {
@@ -232,12 +301,17 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
     public class IDPRemoveTermProof extends DefaultProof implements DOT_Able {
         private final IDPProblem idp;
         private final CollectionMap<FunctionSymbol, Integer> filter;
+        private final BasicObligationNode subBon;
+        private final boolean done;
 
         /** Obligation node where substrategy has been applied. */
 
-        public IDPRemoveTermProof(final IDPProblem idp, final CollectionMap<FunctionSymbol, Integer> filter) {
+        public IDPRemoveTermProof(final IDPProblem idp, final CollectionMap<FunctionSymbol, Integer> filter,
+                BasicObligationNode bon, boolean done) {
             this.idp = idp;
             this.filter = filter;
+            this.subBon = bon;
+            this.done = done;
         }
 
         @Override
@@ -249,6 +323,18 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
                 result.append(
                         "function symbol: " + entry.getKey().getName() + ", removed positions: " + entry.getValue());
                 result.append(o.cond_linebreak());
+            }
+            if (!done) {
+                result.append(o.cond_linebreak());
+                result.append("Created the following IDP without terms:");
+                result.append(o.cond_linebreak());
+                result.append(idp);
+                result.append(o.cond_linebreak());
+
+                result.append("The following proof was generated: ");
+                final GenericExportManager subproof = new GenericExportManager(IDPRemoveTermProof.this.subBon,
+                        "filtering result", false);
+                result.append(o.preFormatted(subproof.export(new PLAIN_Util())));
             }
 
             return result.toString();
