@@ -197,11 +197,7 @@ public class IDPToIRSProcessor extends IDPProcessor {
                     if (elim.condition == null) {
                         continue;
                     }
-                    if (condition == null) {
-                        condition = elim.condition;
-                    } else {
-                        condition = IDPv2ToIDPv1Utilities.getConjunction(condition, elim.condition);
-                    }
+                    condition = IDPv2ToIDPv1Utilities.getConjunction(condition, elim.condition);
 
                 }
                 TRSTerm newRhs = TRSTerm.createFunctionApplication(rhs.getRootSymbol(), ImmutableCreator.create(args));
