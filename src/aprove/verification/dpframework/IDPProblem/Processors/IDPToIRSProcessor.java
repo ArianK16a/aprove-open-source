@@ -176,12 +176,8 @@ public class IDPToIRSProcessor extends IDPProcessor {
     protected Result processIDPProblem(final IDPProblem iDP, final Abortion aborter) throws AbortionException {
         final Set<IGeneralizedRule> rules = new LinkedHashSet<>();
         Set<String> usedNames = new LinkedHashSet<>();
-        Set<GeneralizedRule> allRules = new LinkedHashSet<GeneralizedRule>();
-        allRules.addAll(iDP.getP());
-        allRules.addAll(iDP.getR());
-        usedNames.addAll(CollectionUtils.getNames(CollectionUtils.getFunctionSymbols(allRules)));
-        usedNames.addAll(CollectionUtils.getNames(CollectionUtils.getVariables(allRules)));
-
+        usedNames.addAll(CollectionUtils.getNames(CollectionUtils.getFunctionSymbols(iDP.getP())));
+        usedNames.addAll(CollectionUtils.getNames(CollectionUtils.getVariables(iDP.getP())));
         FreshNameGenerator fng = new FreshNameGenerator(usedNames, FreshNameGenerator.APPEND_NUMBERS);
 
         // transform iDP to rules with no nested functions but with conditions
