@@ -179,6 +179,16 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
                     freshNameMap, takenSymbols, predefinedMap);
             final TRSTerm newR = HelperClass.remove(rule.getRight(), filter, freshNameMap, takenSymbols, predefinedMap);
 
+            if (!Rule.checkProperLandR(newL, newR)) {
+                if (!Rule.checkProperLandR(rule.getLeft(), rule.getRight())) {
+                    System.err.println("encountered improper rule: " + node.getRule());
+                    return ResultFactory.unsuccessful();
+                }
+                System.err.println("rule was broken by us!");
+                // assert false;
+                return ResultFactory.unsuccessful();
+            }
+
             final Node newNode = new Node(Rule.create(newL, newR), node.id, node.loopSubstitution);
             newIdpNodes.add(newNode);
             lockedVariables.addAll(newNode.getRule().getVariables());
@@ -440,7 +450,7 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
             return new ArithmeticElimination(null, term);
         }
         if (IDPPredefinedMap.DEFAULT_MAP.isPredefined(funApp.getFunctionSymbol())) {
-            System.out.println("encountered predefined but unhandled function symbol!!");
+            System.err.println("encountered predefined but unhandled function symbol!!");
         }
 
         return new ArithmeticElimination(null, var);
