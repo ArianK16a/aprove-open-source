@@ -27,6 +27,7 @@ import aprove.DPFramework.IDPProblem.idpGraph.*;
 import aprove.DPFramework.IDPProblem.idpGraph.Node;
 import aprove.DPFramework.IDPProblem.utility.*;
 import aprove.DPFramework.TRSProblem.*;
+import aprove.Framework.Algebra.GeneralPolynomials.Coefficients.*;
 import aprove.Framework.BasicStructures.*;
 import aprove.Framework.Bytecode.Processors.ToIDPv1.*;
 import aprove.Framework.IRSwT.Processors.FilterProcessors.IRSwTTempSortFilterProcessor.*;
@@ -376,16 +377,32 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
                 }
             }
 
+            // a > b holds
             TRSTerm constraint = TRSTerm.createFunctionApplication(funApp.getRootSymbol(), newArgs);
+
+            // the variable replacing a > b is replaced by 0 (treated as true,
+            // must also be replaced in the lhs of all rules)
+            TRSTerm varIsTrue = TRSTerm.createFunctionApplication(
+                    IDPPredefinedMap.DEFAULT_MAP.getSym(PredefinedFunction.Func.Eq, DomainFactory.INTEGER_INTEGER), var,
+                    PredefinedSemanticsFactory.getInt(BigIntImmutable.ZERO, DomainFactory.INTEGERS).getTerm());
+
+            constraint = IDPv2ToIDPv1Utilities.getConjunction(constraint, varIsTrue);
 
             for (TRSTerm subConstraint : subConstraints) {
                 constraint = IDPv2ToIDPv1Utilities.getConjunction(constraint, subConstraint);
             }
 
             // TODO also add false with negated condition?
-            return new ArithmeticElimination(constraint, IDPPredefinedMap.DEFAULT_MAP.getBooleanTrue().getTerm());
+            return new ArithmeticElimination(constraint, var);
         }
 
+        if (IDPPredefinedMap.DEFAULT_MAP.isBooleanTrue(funApp.getFunctionSymbol())) {
+            TRSTerm varIsTrue = TRSTerm.createFunctionApplication(
+                    IDPPredefinedMap.DEFAULT_MAP.getSym(PredefinedFunction.Func.Eq, DomainFactory.INTEGER_INTEGER), var,
+                    PredefinedSemanticsFactory.getInt(BigIntImmutable.ZERO, DomainFactory.INTEGERS).getTerm());
+
+            return new ArithmeticElimination(varIsTrue, var);
+        }
         // 6, 7,...
         if (IDPPredefinedMap.DEFAULT_MAP.isInt(funApp.getFunctionSymbol(), DomainFactory.INTEGERS)) {
             return new ArithmeticElimination(null, term);
@@ -404,27 +421,42 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
         // transform iDP to rules with no nested functions but with conditions
         for (Node node : iDP.getIdpGraph().getNodes()) {
             final GeneralizedRule rule = node.getRule();
-            List<TRSTerm> args = new ArrayList<>();
+            List<TRSTerm> rhsArgs = new ArrayList<>();
+            List<TRSTerm> lhsArgs = new ArrayList<>();
             TRSTerm condition = null;
 
             if (rule.getRight() instanceof TRSFunctionApplication) {
                 TRSFunctionApplication rhs = (TRSFunctionApplication) rule.getRight();
+                TRSFunctionApplication lhs = (TRSFunctionApplication) rule.getLeft();
                 // eliminate nested function calls:
                 // if an argument is an arithmetic function with constant or
                 // variable arguments, move it to the constraint
                 // otherwise replace it by a fresh variable
                 for (TRSTerm arg : rhs.getArguments()) {
                     ArithmeticElimination elim = this.eliminateNestedArithmetic(arg, fng);
-                    args.add(elim.replacement);
+                    rhsArgs.add(elim.replacement);
                     if (elim.condition == null) {
                         continue;
                     }
                     condition = IDPv2ToIDPv1Utilities.getConjunction(condition, elim.condition);
 
                 }
-                TRSTerm newRhs = TRSTerm.createFunctionApplication(rhs.getRootSymbol(), ImmutableCreator.create(args));
+                TRSTerm newRhs = TRSTerm.createFunctionApplication(rhs.getRootSymbol(),
+                        ImmutableCreator.create(rhsArgs));
 
-                final IGeneralizedRule iRule = IGeneralizedRule.create(rule.getLeft(), newRhs, condition);
+                for (TRSTerm arg : lhs.getArguments()) {
+                    ArithmeticElimination elim = this.eliminateNestedArithmetic(arg, fng);
+                    lhsArgs.add(elim.replacement);
+                    if (elim.condition == null) {
+                        continue;
+                    }
+                    condition = IDPv2ToIDPv1Utilities.getConjunction(condition, elim.condition);
+
+                }
+                TRSFunctionApplication newLhs = TRSTerm.createFunctionApplication(lhs.getRootSymbol(),
+                        ImmutableCreator.create(lhsArgs));
+
+                final IGeneralizedRule iRule = IGeneralizedRule.create(newLhs, newRhs, condition);
                 rules.add(iRule);
                 inverseNodes.add(iRule, inverseNodeMap.get(node));
 
