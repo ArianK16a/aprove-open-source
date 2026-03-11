@@ -208,9 +208,9 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
         final IDPProblem newIdpProblem = IDPProblem.create(newIdpGraph, newRRuleAnalysis, newIqTermSet,
                 iDP.isMinimal());
 
-        final IRSProblem irsProblem = this.IDPToIRSProblem(newIdpProblem);
+        final IRSwTProblem newIRSwTProblem = this.IDPToIRSwTProblem(newIdpProblem);
 
-        final BasicObligationNode newOblNode = new BasicObligationNode(irsProblem);
+        final BasicObligationNode newOblNode = new BasicObligationNode(newIRSwTProblem);
 
         final Abortion childAbortion = aborter.createChild(this.time);
         final StrategyExecutionHandle handle = Machine.theMachine.startSubMachine(this.strategy, this.rti.getProgram(),
@@ -241,7 +241,7 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
                 final LinkedHashSet<Node> resultingIdpNodes = new LinkedHashSet<>();
                 for (final BasicObligationNode bon : positions) {
                     final BasicObligation bo = bon.getBasicObligation();
-                    IRSProblem irsResult = ((IRSProblem) bo);
+                    IRSwTProblem irsResult = ((IRSwTProblem) bo);
 
                     for (final IGeneralizedRule r : irsResult.getRules()) {
                         resultingIdpNodes.addAll(this.inverseNodes.get(r));
@@ -329,6 +329,7 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
             }
         }
 
+        TRSTerm trueTerm = TRSTerm.createFunctionApplication(FunctionSymbol.create(fng.getFreshName("booleanTrue", true), 0));
         assert term instanceof TRSFunctionApplication;
         TRSFunctionApplication funApp = (TRSFunctionApplication) term;
         assert IDPPredefinedMap.DEFAULT_MAP.isPredefined(funApp.getFunctionSymbol());
@@ -383,9 +384,12 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
             }
 
             // TODO also add false with negated condition?
-            return new ArithmeticElimination(constraint, IDPPredefinedMap.DEFAULT_MAP.getBooleanTrue().getTerm());
+            return new ArithmeticElimination(constraint, trueTerm);
         }
 
+        if (IDPPredefinedMap.DEFAULT_MAP.isBooleanTrue(funApp.getFunctionSymbol())) {
+            return new ArithmeticElimination(null, trueTerm);
+        }
         // 6, 7,...
         if (IDPPredefinedMap.DEFAULT_MAP.isInt(funApp.getFunctionSymbol(), DomainFactory.INTEGERS)) {
             return new ArithmeticElimination(null, term);
@@ -394,7 +398,7 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
         return new ArithmeticElimination(null, var);
     }
 
-    private final IRSProblem IDPToIRSProblem(final IDPProblem iDP) {
+    private final IRSwTProblem IDPToIRSwTProblem(final IDPProblem iDP) {
         final Set<IGeneralizedRule> rules = new LinkedHashSet<>();
         Set<String> usedNames = new LinkedHashSet<>();
         usedNames.addAll(CollectionUtils.getNames(CollectionUtils.getFunctionSymbols(iDP.getP())));
@@ -404,34 +408,48 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
         // transform iDP to rules with no nested functions but with conditions
         for (Node node : iDP.getIdpGraph().getNodes()) {
             final GeneralizedRule rule = node.getRule();
-            List<TRSTerm> args = new ArrayList<>();
+            List<TRSTerm> rhsArgs = new ArrayList<>();
+            List<TRSTerm> lhsArgs = new ArrayList<>();
             TRSTerm condition = null;
 
             if (rule.getRight() instanceof TRSFunctionApplication) {
                 TRSFunctionApplication rhs = (TRSFunctionApplication) rule.getRight();
+                TRSFunctionApplication lhs = (TRSFunctionApplication) rule.getLeft();
                 // eliminate nested function calls:
                 // if an argument is an arithmetic function with constant or
                 // variable arguments, move it to the constraint
                 // otherwise replace it by a fresh variable
                 for (TRSTerm arg : rhs.getArguments()) {
                     ArithmeticElimination elim = this.eliminateNestedArithmetic(arg, fng);
-                    args.add(elim.replacement);
+                    rhsArgs.add(elim.replacement);
                     if (elim.condition == null) {
                         continue;
                     }
                     condition = IDPv2ToIDPv1Utilities.getConjunction(condition, elim.condition);
 
                 }
-                TRSTerm newRhs = TRSTerm.createFunctionApplication(rhs.getRootSymbol(), ImmutableCreator.create(args));
+                TRSTerm newRhs = TRSTerm.createFunctionApplication(rhs.getRootSymbol(), ImmutableCreator.create(rhsArgs));
 
-                final IGeneralizedRule iRule = IGeneralizedRule.create(rule.getLeft(), newRhs, condition);
+                
+                for (TRSTerm arg : lhs.getArguments()) {
+                    ArithmeticElimination elim = this.eliminateNestedArithmetic(arg, fng);
+                    lhsArgs.add(elim.replacement);
+                    if (elim.condition == null) {
+                        continue;
+                    }
+                    condition = IDPv2ToIDPv1Utilities.getConjunction(condition, elim.condition);
+
+                }
+                TRSFunctionApplication newLhs = TRSTerm.createFunctionApplication(lhs.getRootSymbol(), ImmutableCreator.create(lhsArgs));
+
+                final IGeneralizedRule iRule = IGeneralizedRule.create(newLhs, newRhs, condition);
                 rules.add(iRule);
                 inverseNodes.add(iRule, inverseNodeMap.get(node));
 
             }
         }
 
-        return new IRSProblem(ImmutableCreator.create(rules));
+        return new IRSwTProblem(ImmutableCreator.create(rules));
     }
 
     // ================================================================================
