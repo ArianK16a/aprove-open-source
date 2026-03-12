@@ -435,6 +435,39 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
             return new ArithmeticElimination(constraint, var);
         }
 
+        // (a = b)
+        if (IDPPredefinedMap.DEFAULT_MAP.isEq(funApp.getFunctionSymbol())) {
+            // all the sub constraints must be added
+
+            // the new variables used in the constraint
+            List<TRSTerm> newArgs = new ArrayList<>();
+            List<TRSTerm> subConstraints = new ArrayList<>();
+
+            for (TRSTerm arg : funApp.getArguments()) {
+                ArithmeticElimination childElim = this.eliminateNestedArithmetic(arg, fng);
+                newArgs.add(childElim.replacement);
+                if (childElim.condition != null) {
+                    subConstraints.add(childElim.condition);
+                }
+            }
+
+            // The new variables must be equal
+            TRSTerm constraint = TRSTerm.createFunctionApplication(funApp.getFunctionSymbol(), newArgs);
+
+            for (TRSTerm subConstraint : subConstraints) {
+                constraint = IDPv2ToIDPv1Utilities.getConjunction(constraint, subConstraint);
+            }
+
+            // the new variable is true too
+            TRSTerm varIsTrue = TRSTerm.createFunctionApplication(
+                    IDPPredefinedMap.DEFAULT_MAP.getSym(PredefinedFunction.Func.Eq, DomainFactory.INTEGER_INTEGER), var,
+                    PredefinedSemanticsFactory.getInt(BigIntImmutable.ZERO, DomainFactory.INTEGERS).getTerm());
+
+            constraint = IDPv2ToIDPv1Utilities.getConjunction(constraint, varIsTrue);
+
+            return new ArithmeticElimination(constraint, var);
+        }
+
         // 6, 7,...
         if (IDPPredefinedMap.DEFAULT_MAP.isInt(funApp.getFunctionSymbol(), DomainFactory.INTEGERS)) {
             return new ArithmeticElimination(null, term);
