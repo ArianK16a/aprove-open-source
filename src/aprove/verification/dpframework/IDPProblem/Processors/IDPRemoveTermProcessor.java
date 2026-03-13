@@ -143,15 +143,7 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
                     freshNameMap, takenSymbols, predefinedMap);
             final TRSTerm newR = HelperClass.remove(r.getRight(), filter, freshNameMap, takenSymbols, predefinedMap);
 
-            if (!newL.getVariables().containsAll(newR.getVariables())) {
-                // if the rhs includes variables not occurring in the lhs, the
-                // rule must have the form f(x_1, ..., x_n) -> v where x_i != v
-                // because if f would occur inside another term it would also be
-                // removed due to it being an integer or boolean position of the
-                // function symbol it occurs under
-                continue;
-            }
-            final Rule rule = Rule.create(newL, newR);
+            final GeneralizedRule rule = GeneralizedRule.create(newL, newR);
             lockedVariables.addAll(rule.getVariables());
             rules.add(rule);
         }
