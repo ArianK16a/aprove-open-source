@@ -221,8 +221,8 @@ public class TerminationSCCToIDPv1Processor extends Processor.ProcessorSkeleton 
             )
         );
         // Transform constraints
-        Set<GeneralizedRule> pGRules = IGeneralizedRule.removeConditions(curPIGRules);
-        Set<GeneralizedRule> rGRules = IGeneralizedRule.removeConditions(curRIGRules);
+        Set<GeneralizedRule> pGRules = IGeneralizedRule.removeConditions(curPIGRules, true);
+        Set<GeneralizedRule> rGRules = IGeneralizedRule.removeConditions(curRIGRules, true);
         // TODO give this type a name
         Triple<
             Pair<Set<GeneralizedRule>, Map<FunctionSymbol, FunctionSymbol>>,
@@ -309,11 +309,13 @@ public class TerminationSCCToIDPv1Processor extends Processor.ProcessorSkeleton 
         aborter.checkAbortion();
         pGRules =
             IGeneralizedRule.removeConditions(
-                TerminationSCCToIDPv1Processor.filterFreeVarFromCond(curPIGRules, predefinedMap, false)
+                TerminationSCCToIDPv1Processor.filterFreeVarFromCond(curPIGRules, predefinedMap, false),
+                true
             );
         rGRules =
             IGeneralizedRule.removeConditions(
-                TerminationSCCToIDPv1Processor.filterFreeVarFromCond(curRIGRules, predefinedMap, false)
+                TerminationSCCToIDPv1Processor.filterFreeVarFromCond(curRIGRules, predefinedMap, false),
+                true
             );
         //Prepare the shit out of idp:
         aborter.checkAbortion();
@@ -867,8 +869,8 @@ public class TerminationSCCToIDPv1Processor extends Processor.ProcessorSkeleton 
         if (qtrsDumpDir == null) {
             return;
         }
-        final Set<GeneralizedRule> pRulesUnconded = IGeneralizedRule.removeConditions(pIGRules);
-        final Set<GeneralizedRule> rRulesUnconded = IGeneralizedRule.removeConditions(rIGRules);
+        final Set<GeneralizedRule> pRulesUnconded = IGeneralizedRule.removeConditions(pIGRules, true);
+        final Set<GeneralizedRule> rRulesUnconded = IGeneralizedRule.removeConditions(rIGRules, true);
         TerminationSCCToIDPv1Processor.dumpGRulesToQTRSIfPossible(
             qtrsDumpDir,
             rti,
