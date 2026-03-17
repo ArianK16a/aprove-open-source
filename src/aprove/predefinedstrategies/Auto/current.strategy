@@ -1241,18 +1241,7 @@ jbcGraphSCCIRS = TerminationSCCToIRS[EncodeStaticFields=True, EncodeArrayLengthS
 
 
 jbcIDPv2 = idp
-jbcIDPv1 = First(
-             IDPtoQDP[Apply = CONSTONLY]:RunDefaultStrategyForObligation,
-             First(
-               Solve(
-                 Timer(12000, idpFast)
-               ),
-               AnyDelay(5000,
-                 Solve(idpSlow),
-                 Solve(IDPtoQDP[Apply = ALWAYSFILTER]:RunDefaultStrategyForObligation)
-               )
-             )
-           )
+jbcIDPv1 = idpv1
 
 jbcComplexity =
   CombineParallel(
