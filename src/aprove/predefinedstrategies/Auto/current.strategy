@@ -1226,13 +1226,16 @@ jbcGraph = Any(
                 )
               )
 
-jbcGraphSCC = jbcGraphSCCIRS
+jbcGraphSCC = jbcGraphSCCIDPv1
 
 jbcGraphSCCFast = jbcGraphSCCIRS
 jbcGraphSCCSlow = jbcGraphSCCIDPv1
 jbcGraphSCCIDPv2 = TerminationSCCToIDPv2[CleanRules=False]:
                    jbcIDPv2
 
+# TODO test with/without:
+#                   Maybe(IDPUsableRules):
+#                   Maybe(IDPCapGraph):
 jbcGraphSCCIDPv1 = TerminationSCCToIDPv1[EncodeStaticFields=True, EncodeReferenceTypesAsTerms=True, EncodePathLength=False]:
                    jbcIDPv1
 
