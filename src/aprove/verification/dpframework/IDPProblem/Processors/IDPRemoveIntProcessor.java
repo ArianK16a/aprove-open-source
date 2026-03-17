@@ -51,6 +51,7 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
     // Properties
     // ================================================================================
 
+    private final boolean tempFilter;
     private final UserStrategy strategy;
     private final int time;
     private final static Logger log = Logger
@@ -62,6 +63,7 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
     // ================================================================================
     @ParamsViaArgumentObject
     public IDPRemoveIntProcessor(final Arguments arguments) {
+        this.tempFilter = arguments.tempFilter;
         this.strategy = arguments.strategy;
         this.time = arguments.time;
     }
@@ -164,6 +166,9 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
             return ResultFactory.unsuccessful();
         }
 
+        if (!this.tempFilter) {
+            return ResultFactory.proved(qDP, YNMImplication.SOUND, new IDPRemoveIntProof(iDP, qDP, filter, null, true));
+        }
         final BasicObligationNode newOblNode = new BasicObligationNode(qDP);
 
         final Abortion childAbortion = aborter.createChild(this.time);
@@ -348,11 +353,22 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
     // ================================================================================
 
     public static class Arguments {
+        /**
+         * Whether the processor filters temporarily or jumps to an IRS if true,
+         * `strategy` is executed and removed rules will be removed from the IDP
+         * if false, an IRSProblem will be returned
+         */
+        boolean tempFilter = false;
+
         /** Strategy to execute. */
         UserStrategy strategy;
 
         /** Time to live! */
         int time = 42042;
+
+        public void setTempFilter(final boolean tempFilter) {
+            this.tempFilter = tempFilter;
+        }
 
         public void setStrategy(final String strategyName) {
             this.strategy = new VariableStrategy(strategyName);

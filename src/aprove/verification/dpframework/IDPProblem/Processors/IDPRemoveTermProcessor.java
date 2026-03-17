@@ -58,6 +58,7 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
     // Properties
     // ================================================================================
 
+    private final boolean tempFilter;
     private final UserStrategy strategy;
     private final int time;
     private final static Logger log = Logger
@@ -71,6 +72,7 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
     // ================================================================================
     @ParamsViaArgumentObject
     public IDPRemoveTermProcessor(final Arguments arguments) {
+        this.tempFilter = arguments.tempFilter;
         this.strategy = arguments.strategy;
         this.time = arguments.time;
     }
@@ -202,6 +204,12 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
                 iDP.isMinimal());
 
         final IRSProblem irsProblem = this.IDPToIRSProblem(newIdpProblem);
+
+        if (!this.tempFilter) {
+            return ResultFactory.proved(irsProblem, YNMImplication.SOUND,
+                    new IDPRemoveTermProof(newIdpProblem, filter, null, true));
+
+        }
 
         final BasicObligationNode newOblNode = new BasicObligationNode(irsProblem);
 
@@ -583,11 +591,22 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
     // ================================================================================
 
     public static class Arguments {
+        /**
+         * Whether the processor filters temporarily or jumps to an IRS. If
+         * true, `strategy` is executed and removed rules will be removed from
+         * the IDP. If false, an IRSProblem will be returned
+         */
+        boolean tempFilter = false;
+
         /** Strategy to execute. */
         UserStrategy strategy;
 
         /** Time to live! */
         int time = 42042;
+
+        public void setTempFilter(final boolean tempFilter) {
+            this.tempFilter = tempFilter;
+        }
 
         public void setStrategy(final String strategyName) {
             this.strategy = new VariableStrategy(strategyName);
