@@ -1089,6 +1089,8 @@ declare IDPReductionPair = aprove.verification.dpframework.IDPProblem.Processors
 declare IDPMCNP = aprove.verification.dpframework.IDPProblem.Processors.IDPMCNPProcessor
     defaults [DropBooleanSymbols = True, DropContextSensitiveSymbols = True]
 
+declare IDPRemoveInt = aprove.verification.dpframework.IDPProblem.Processors.IDPRemoveIntProcessor
+declare IDPRemoveTerm = aprove.verification.dpframework.IDPProblem.Processors.IDPRemoveTermProcessor
 
 declare ITRSConstantFolding = aprove.verification.dpframework.IDPProblem.Processors.ITRSConstantFoldingProcessor
 declare ITRSToIDP = aprove.verification.dpframework.IDPProblem.Processors.ITRStoIDPProcessor
