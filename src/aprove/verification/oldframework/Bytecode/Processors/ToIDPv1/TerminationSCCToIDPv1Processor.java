@@ -309,12 +309,12 @@ public class TerminationSCCToIDPv1Processor extends Processor.ProcessorSkeleton 
         aborter.checkAbortion();
         pGRules =
             IGeneralizedRule.removeConditions(
-                TerminationSCCToIDPv1Processor.filterFreeVarFromCond(curPIGRules, predefinedMap, false),
+                curPIGRules,
                 true
             );
         rGRules =
             IGeneralizedRule.removeConditions(
-                TerminationSCCToIDPv1Processor.filterFreeVarFromCond(curRIGRules, predefinedMap, false),
+                curRIGRules,
                 true
             );
         //Prepare the shit out of idp:
