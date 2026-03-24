@@ -1242,11 +1242,8 @@ jbcGraphSCCIDPv2 = TerminationSCCToIDPv2[CleanRules=False]:
 # TODO test with/without:
 #                   Maybe(IDPUsableRules):
 #                   Maybe(IDPCapGraph):
-jbcGraphSCCIDPv1 = TerminationSCCToIDPv1[EncodeStaticFields=True, EncodeReferenceTypesAsTerms=True, EncodePathLength=False]:
-                   First(
-                     Solve(jbcIDPv1),
-                     Solve(qdp)
-                   )
+jbcGraphSCCIDPv1 = TerminationSCCToIDPv1[EncodeStaticFields=True, EncodeReferenceTypesAsTerms=True, EncodePathLength=False, TryQDPExport=False]:
+                   jbcIDPv1
 
 
 jbcGraphSCCIRS = TerminationSCCToIRS[EncodeStaticFields=True, EncodeArrayLengthSeparately=False, ApplyPathLength=False, TryQDPExport=True]:RunDefaultStrategyForObligation
