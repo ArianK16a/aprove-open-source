@@ -190,7 +190,7 @@ public class TerminationSCCToIDPv1Processor extends Processor.ProcessorSkeleton 
         final Abortion aborter
     ) throws AbortionException {
         RuleCombiner pIGCombiner = new RuleCombiner(pIGRules, Collections.emptySet(), aborter);
-        Set<IGeneralizedRule> curPIGRules = pIGCombiner.combineRules(true, true).y;
+        Set<IGeneralizedRule> curPIGRules = pIGCombiner.combineRules(false, true).y;
         final Set<FunctionSymbol> usedInPSymbols = new LinkedHashSet<>();
         for (final IGeneralizedRule rule : curPIGRules) {
             usedInPSymbols.addAll(rule.getRight().getFunctionSymbols());
@@ -198,7 +198,7 @@ public class TerminationSCCToIDPv1Processor extends Processor.ProcessorSkeleton 
         Set<IGeneralizedRule> curRIGRules;
         if (args.compressRules) {
             RuleCombiner rIGCombiner = new RuleCombiner(rIGRules, usedInPSymbols, aborter);
-            curRIGRules = filterUnreachableRRules(curPIGRules, rIGCombiner.combineRules(true, true).y);
+            curRIGRules = filterUnreachableRRules(curPIGRules, rIGCombiner.combineRules(false, true).y);
         } else {
             curRIGRules = TerminationSCCToIDPv1Processor.filterUnreachableRRules(curPIGRules, rIGRules);
         }
@@ -290,9 +290,9 @@ public class TerminationSCCToIDPv1Processor extends Processor.ProcessorSkeleton 
         curRIGRules = TerminationSCCToIDPv1Processor.removeTrivialConstraints(curRIGRules, predefinedMap);
         if (args.compressRules) {
             pIGCombiner = new RuleCombiner(curPIGRules, Collections.emptySet(), aborter);
-            curPIGRules = pIGCombiner.combineRules(true, true).y;
+            curPIGRules = pIGCombiner.combineRules(false, true).y;
             RuleCombiner rIGCombiner = new RuleCombiner(curRIGRules, usedInPSymbols, aborter);
-            curRIGRules = rIGCombiner.combineRules(true, true).y;
+            curRIGRules = rIGCombiner.combineRules(false, true).y;
         }
         curPIGRules = TerminationSCCToIDPv1Processor.removePredefinedOpsOnLhs(curPIGRules, predefinedMap);
         curRIGRules = TerminationSCCToIDPv1Processor.removePredefinedOpsOnLhs(curRIGRules, predefinedMap);
