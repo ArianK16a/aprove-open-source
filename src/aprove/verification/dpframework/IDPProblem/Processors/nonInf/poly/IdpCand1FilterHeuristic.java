@@ -47,6 +47,10 @@ public class IdpCand1FilterHeuristic extends AbstractFilterHeuristic {
                 arithmetricVariables, relationalVariables, varPos, predefinedMap);
             arithmetricVariables.addAll(relationalVariables);
             for (final TRSVariable v : arithmetricVariables) {
+                if (varPos.get(v) == null) {
+                    System.err.println("varPost.get(v) is null for v=" + v);
+                    continue;
+                }
                 for (final Pair<FunctionSymbol, Integer> p : varPos.get(v)) {
                     if (Globals.DEBUG_MPLUECKER) {
                         AbstractFilterHeuristic.log.finest("Activate RULE " + rule + "/" + v + " -> " + p.x + "/" + p.y);
@@ -75,12 +79,12 @@ public class IdpCand1FilterHeuristic extends AbstractFilterHeuristic {
         final IDPPredefinedMap predefinedMap) {
         if (t.isVariable()) {
             final TRSVariable v = (TRSVariable) t;
+            Set<Pair<FunctionSymbol, Integer>> varPos = variablePositions.get(v);
+            if (varPos == null) {
+                varPos = new LinkedHashSet<Pair<FunctionSymbol, Integer>>();
+                variablePositions.put(v, varPos);
+            }
             if (addPath) {
-                Set<Pair<FunctionSymbol, Integer>> varPos = variablePositions.get(v);
-                if (varPos == null) {
-                    varPos = new LinkedHashSet<Pair<FunctionSymbol, Integer>>();
-                    variablePositions.put(v, varPos);
-                }
                 varPos.addAll(currentPath);
             }
             if (relational) {
