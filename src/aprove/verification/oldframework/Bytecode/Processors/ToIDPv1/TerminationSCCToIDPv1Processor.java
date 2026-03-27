@@ -33,6 +33,7 @@ import aprove.verification.oldframework.Bytecode.Graphs.FiniteInterpretation.Nod
 import aprove.verification.oldframework.Bytecode.Processors.*;
 import aprove.verification.oldframework.Bytecode.Processors.ToIDPv2.*;
 import aprove.verification.oldframework.Bytecode.Processors.ToIDPv2.TerminationSCCToIDPv2Processor.*;
+import aprove.verification.oldframework.Bytecode.Processors.ToIntTRS.*;
 import aprove.verification.oldframework.Bytecode.Processors.ToSCC.*;
 import aprove.verification.oldframework.Bytecode.Utils.*;
 import aprove.verification.oldframework.IRSwT.*;
@@ -306,6 +307,19 @@ public class TerminationSCCToIDPv1Processor extends Processor.ProcessorSkeleton 
                 new IGeneralizedRuleSet(curPIGRules, curRIGRules)
             )
         );
+        if (args.duplicateNestedIntegerArguments) {
+            curPIGRules = TerminationSCCToIRSProcessor.copyIntVarsToTopPos(curPIGRules, predefinedMap);
+            conversionLog.add(
+                    new Pair<String, RuleSet>(
+                        "Copied int vars to top pos. Obtained "
+                        + curPIGRules.size()
+                        + " conditional rules for P and "
+                        + curRIGRules.size()
+                        + " conditional rules for R.",
+                        new IGeneralizedRuleSet(curPIGRules, curRIGRules)
+                    )
+                );
+        }
         aborter.checkAbortion();
         pGRules =
             IGeneralizedRule.removeConditions(
@@ -974,6 +988,11 @@ public class TerminationSCCToIDPv1Processor extends Processor.ProcessorSkeleton 
          * symbols). This doesn't really make sense without cleanRules = true.
          */
         public boolean tryQDPExport = true;
+
+        /**
+         * Duplicate integer argument nested in function symbols to the top level before doing anything.
+         */
+        public boolean duplicateNestedIntegerArguments = true;
 
     }
 
