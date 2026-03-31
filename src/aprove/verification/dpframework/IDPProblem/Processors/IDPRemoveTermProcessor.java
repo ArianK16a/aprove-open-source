@@ -491,7 +491,7 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
             final GeneralizedRule rule = node.getRule();
             List<TRSTerm> rhsArgs = new ArrayList<>();
             List<TRSTerm> lhsArgs = new ArrayList<>();
-            TRSTerm condition = null;
+            TRSTerm condition = IDPPredefinedMap.DEFAULT_MAP.getBooleanTrue().getTerm();
 
             if (rule.getRight() instanceof TRSFunctionApplication) {
                 TRSFunctionApplication rhs = (TRSFunctionApplication) rule.getRight();
