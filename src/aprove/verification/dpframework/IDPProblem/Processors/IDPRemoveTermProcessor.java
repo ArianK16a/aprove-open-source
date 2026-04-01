@@ -207,7 +207,7 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
 
         if (!this.tempFilter) {
             return ResultFactory.proved(irsProblem, YNMImplication.SOUND,
-                    new IDPRemoveTermProof(newIdpProblem, filter, null, true));
+                    new IDPRemoveTermProof(filter));
 
         }
 
@@ -231,7 +231,7 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
                 final ImmutableList<BasicObligationNode> positions = s.getPositions();
 
                 if (newOblNode.getTruthValue().equals(YNM.YES)) {
-                    final IDPRemoveTermProof proof = new IDPRemoveTermProof(newIdpProblem, filter, newOblNode, true);
+                    final IDPRemoveTermProof proof = new IDPRemoveTermProof(filter);
                     final ExecutableStrategy succStrategy = Success.EMPTY;
                     return ResultFactory.provedWithNewStrategy(newOblNode, YNMImplication.SOUND, proof, succStrategy);
                 }
@@ -257,17 +257,15 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
                     final IDPProblem newIdp = IDPProblem.create(resultingIdpGraph,
                             new RuleAnalysis<GeneralizedRule>(idpRRules, predefinedMap), iDP.getQ(), iDP.isMinimal());
 
-                    boolean done = resultingIdpNodes.isEmpty();
-
-                    final IDPRemoveTermProof proof = new IDPRemoveTermProof(newIdp, filter, newOblNode, done);
-
-                    if (done) {
+                    if (resultingIdpNodes.isEmpty()) {
+                        final IDPRemoveTermProof proof = new IDPRemoveTermProof(filter);
                         newOblNode.recursiveRepropagateTruthValues();
                         final ExecutableStrategy succStrategy = Success.EMPTY;
                         return ResultFactory.provedWithNewStrategy(newOblNode, YNMImplication.SOUND, proof,
                                 succStrategy);
 
                     } else {
+                        final IDPRemoveTermProof proof = new IDPTempRemoveTermProof(filter, newOblNode);
                         return ResultFactory.proved(newIdp, YNMImplication.SOUND, proof);
                     }
 
@@ -538,25 +536,19 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
     // Proof
     // ================================================================================
 
-    public class IDPRemoveTermProof extends DefaultProof implements DOT_Able {
-        private final IDPProblem idp;
+    public class IDPRemoveTermProof extends DefaultProof {
         private final CollectionMap<FunctionSymbol, Integer> filter;
-        private final BasicObligationNode subBon;
-        private final boolean done;
 
         /** Obligation node where substrategy has been applied. */
 
-        public IDPRemoveTermProof(final IDPProblem idp, final CollectionMap<FunctionSymbol, Integer> filter,
-                BasicObligationNode bon, boolean done) {
-            this.idp = idp;
+        public IDPRemoveTermProof(final CollectionMap<FunctionSymbol, Integer> filter) {
             this.filter = filter;
-            this.subBon = bon;
-            this.done = done;
         }
 
         @Override
         public String export(final Export_Util o, final VerbosityLevel level) {
             StringBuilder result = new StringBuilder();
+
             result.append("The following positions were removed because their type is not integer:");
             result.append(o.linebreak());
             for (Entry<FunctionSymbol, Collection<Integer>> entry : this.filter.entrySet()) {
@@ -564,25 +556,35 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
                         "function symbol: " + entry.getKey().getName() + ", removed positions: " + entry.getValue());
                 result.append(o.cond_linebreak());
             }
-            if (!done) {
-                result.append(o.cond_linebreak());
-                result.append("Created the following IDP without terms:");
-                result.append(o.cond_linebreak());
-                result.append(idp);
-                result.append(o.cond_linebreak());
-
-                result.append("The following proof was generated: ");
-                final GenericExportManager subproof = new GenericExportManager(IDPRemoveTermProof.this.subBon,
-                        "filtering result", false);
-                result.append(o.preFormatted(subproof.export(new PLAIN_Util())));
-            }
 
             return result.toString();
         }
+    }
+
+    public class IDPTempRemoveTermProof extends IDPRemoveTermProof {
+        private final BasicObligationNode subBon;
+
+        /** Obligation node where substrategy has been applied. */
+
+        public IDPTempRemoveTermProof(final CollectionMap<FunctionSymbol, Integer> filter,
+                BasicObligationNode bon) {
+            super(filter);
+            this.subBon = bon;
+        }
 
         @Override
-        public String toDOT() {
-            return this.idp.getIdpGraph().toDOT();
+        public String export(final Export_Util o, final VerbosityLevel level) {
+            StringBuilder result = new StringBuilder();
+
+            result.append(super.export(o, level));
+            result.append(o.linebreak());
+
+            result.append("The following proof was generated: ");
+            final GenericExportManager subproof = new GenericExportManager(IDPTempRemoveTermProof.this.subBon,
+                    "filtering result", false);
+            result.append(o.preFormatted(subproof.export(new PLAIN_Util())));
+
+            return result.toString();
         }
     }
 
