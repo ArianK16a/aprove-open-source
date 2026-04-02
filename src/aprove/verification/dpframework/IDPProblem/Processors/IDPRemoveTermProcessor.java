@@ -30,6 +30,7 @@ import aprove.DPFramework.TRSProblem.*;
 import aprove.Framework.Algebra.GeneralPolynomials.Coefficients.*;
 import aprove.Framework.BasicStructures.*;
 import aprove.Framework.Bytecode.Processors.ToIDPv1.*;
+import aprove.Framework.IRSwT.*;
 import aprove.Framework.IRSwT.Processors.FilterProcessors.IRSwTTempSortFilterProcessor.*;
 import aprove.Framework.IntTRS.*;
 import aprove.Framework.Logic.*;
@@ -318,7 +319,9 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
             return new ArithmeticElimination(null, term);
         }
 
+        // The fresh variable
         TRSVariable var = TRSTerm.createVariable(fng.getFreshName("var_" + term.getName(), false));
+
         // If any nested function symbol is not pre-defined, return a free
         // variable
         for (FunctionSymbol symbol : term.getFunctionSymbols()) {
@@ -331,21 +334,37 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
         TRSFunctionApplication funApp = (TRSFunctionApplication) term;
         assert IDPPredefinedMap.DEFAULT_MAP.isPredefined(funApp.getFunctionSymbol());
 
-        // Boolean true and false are replaced by integer variables with value 1
-        // and 0
+        // A constant value v is replaced by a fresh variable x and the
+        // constraint
+        // v = x. Boolean constants (true and false) are replaced by integer
+        // variables with value 1 or 0.
+        // This is only necessary for the lhs, but doesn't harm to also have for
+        // the rhs.
         if (IDPPredefinedMap.DEFAULT_MAP.isBooleanTrue(funApp.getFunctionSymbol())) {
-            return new ArithmeticElimination(IDPPredefinedMap.DEFAULT_MAP.getBooleanTrue().getTerm(), PredefinedSemanticsFactory.getInt(BigIntImmutable.ONE, DomainFactory.INTEGERS).getTerm());
-        }
-        if (IDPPredefinedMap.DEFAULT_MAP.isBooleanFalse(funApp.getFunctionSymbol())) {
-            return new ArithmeticElimination(IDPPredefinedMap.DEFAULT_MAP.getBooleanTrue().getTerm(), PredefinedSemanticsFactory.getInt(BigIntImmutable.ZERO, DomainFactory.INTEGERS).getTerm());
-        }
-
-        // 6, 7,...
-        if (IDPPredefinedMap.DEFAULT_MAP.isInt(funApp.getFunctionSymbol(), DomainFactory.INTEGERS)) {
-            return new ArithmeticElimination(IDPPredefinedMap.DEFAULT_MAP.getBooleanTrue().getTerm(), funApp);
+            return new ArithmeticElimination(
+                    TRSTerm.createFunctionApplication(
+                            IDPPredefinedMap.DEFAULT_MAP.getSym(PredefinedFunction.Func.Eq,
+                                    DomainFactory.INTEGER_INTEGER),
+                            var,
+                            PredefinedSemanticsFactory.getInt(BigIntImmutable.ONE, DomainFactory.INTEGERS).getTerm()),
+                    var);
+        } else if (IDPPredefinedMap.DEFAULT_MAP.isBooleanFalse(funApp.getFunctionSymbol())) {
+            return new ArithmeticElimination(
+                    TRSTerm.createFunctionApplication(
+                            IDPPredefinedMap.DEFAULT_MAP.getSym(PredefinedFunction.Func.Eq,
+                                    DomainFactory.INTEGER_INTEGER),
+                            var,
+                            PredefinedSemanticsFactory.getInt(BigIntImmutable.ZERO, DomainFactory.INTEGERS).getTerm()),
+                    var);
+        } else if (IDPPredefinedMap.DEFAULT_MAP.isInt(funApp.getFunctionSymbol(), DomainFactory.INTEGERS)) {
+            return new ArithmeticElimination(TRSTerm.createFunctionApplication(
+                    IDPPredefinedMap.DEFAULT_MAP.getSym(PredefinedFunction.Func.Eq, DomainFactory.INTEGER_INTEGER), var,
+                    funApp), var);
         }
 
         // +(a,b)...
+        // Arithmetic functions are moved 1:1 to the constraint and a fresh
+        // variable is inserted.
         if (IDPPredefinedMap.DEFAULT_MAP.getPredefinedFunction(funApp.getFunctionSymbol()).isArithmetic()) {
             TRSTerm constraint = TRSTerm.createFunctionApplication(
                     IDPPredefinedMap.DEFAULT_MAP.getSym(PredefinedFunction.Func.Eq, DomainFactory.INTEGER_INTEGER), var,
@@ -355,6 +374,10 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
         }
 
         // >(a,b)...
+        // Relations/Boolean functions return a boolean, but IRSs only allow
+        // integers.
+        // Replace them by a new integer variable which is fixed to 1 if the
+        // relation holds, and 0 otherwise.
         if (IDPPredefinedMap.DEFAULT_MAP.getPredefinedFunction(funApp.getFunctionSymbol()).isRelation()
                 || IDPPredefinedMap.DEFAULT_MAP.getPredefinedFunction(funApp.getFunctionSymbol()).isBoolean()) {
             // replace with constant true, represented as 1, or false,
@@ -371,17 +394,15 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
                     PredefinedSemanticsFactory.getInt(BigIntImmutable.ZERO, DomainFactory.INTEGERS).getTerm());
 
             TRSTerm relationIsTrue = IDPv2ToIDPv1Utilities.getConjunction(funApp, varIsTrue);
-            TRSTerm relationIsFalse = IDPv2ToIDPv1Utilities.getConjunction(TRSTerm.createFunctionApplication(
-                    IDPPredefinedMap.DEFAULT_MAP.getSym(PredefinedFunction.Func.Lnot, DomainFactory.BOOLEAN), funApp),
+            TRSTerm relationIsFalse = IDPv2ToIDPv1Utilities.getConjunction(IDPv2ToIDPv1Utilities.negate(funApp),
                     varIsFalse);
 
-            return new ArithmeticElimination(IDPv2ToIDPv1Utilities.getDisjunction(relationIsTrue, relationIsFalse),
-                    var);
+            TRSTerm condition = IDPv2ToIDPv1Utilities.getDisjunction(relationIsTrue, relationIsFalse);
+            // return new ArithmeticElimination(relationIsTrue, var);
+            return new ArithmeticElimination(condition, var);
         }
 
-        if (IDPPredefinedMap.DEFAULT_MAP.isPredefined(funApp.getFunctionSymbol())) {
-            System.err.println("encountered predefined but unhandled function symbol!!");
-        }
+        assert false : "encountered predefined but unhandled function symbol: " + funApp.getFunctionSymbol().toString();
 
         return new ArithmeticElimination(null, var);
     }
@@ -425,10 +446,20 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
                 TRSFunctionApplication newLhs = TRSTerm.createFunctionApplication(lhs.getRootSymbol(),
                         ImmutableCreator.create(lhsArgs));
 
-                final IGeneralizedRule iRule = IGeneralizedRule.create(newLhs, newRhs, condition);
-                rules.add(iRule);
-                inverseNodes.add(iRule, inverseNodeMap.get(node));
+                IDPPredefinedMap predefinedMap = iDP.getRuleAnalysis().getPreDefinedMap();
+                final TRSFunctionApplication condFA = (TRSFunctionApplication) condition;
 
+                TRSTerm killedNot = IRSwTFormatTransformer.killNOT(condFA, predefinedMap);
+                final Set<TRSTerm> newConds = killedNot.isVariable() ? Collections.singleton(killedNot)
+                        : IRSwTFormatTransformer.killOR(
+                                IRSwTFormatTransformer.killNE((TRSFunctionApplication) killedNot, predefinedMap),
+                                predefinedMap);
+                for (TRSTerm cond : newConds) {
+                    IGeneralizedRule iRule = IGeneralizedRule.create(newLhs, newRhs, cond);
+                    // iRule = IDPv2ToIDPv1Utilities.shuffleMatchings(iRule);
+                    rules.add(iRule);
+                    inverseNodes.add(iRule, inverseNodeMap.get(node));
+                }
             }
         }
 
