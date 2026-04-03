@@ -1015,7 +1015,7 @@ idpv1MainLoop = First(
                Solve(
                  Timer(12000, idpFast)
                ),
-               AnyDelay(5000,
+               Any(
                  Solve(idpSlow),
                  Solve(IDPRemoveTerm[TempFilter=True, Time=10000, Strategy="idpIRSRuleRemoval"]:idpv1MainLoop),
                  Solve(IDPRemoveInt[TempFilter=True, Time=10000, Strategy="idpQDPRuleRemoval"]:idpv1MainLoop),
@@ -1024,11 +1024,9 @@ idpv1MainLoop = First(
              )
            )
 
-idpv1 = AnyDelay(10000,
-             Any(
-               Solve(IDPRemoveTerm:RunDefaultStrategyForObligation),
-               Solve(IDPRemoveInt:RunDefaultStrategyForObligation)
-             ),
+idpv1 = Any(
+             Solve(IDPRemoveTerm:RunDefaultStrategyForObligation),
+             Solve(IDPRemoveInt:RunDefaultStrategyForObligation),
              idpv1MainLoop
            )
 
