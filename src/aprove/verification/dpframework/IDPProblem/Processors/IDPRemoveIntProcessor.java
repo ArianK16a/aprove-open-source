@@ -4,42 +4,38 @@
  * @version $Id$
  */
 
-package aprove.DPFramework.IDPProblem.Processors;
+package aprove.verification.dpframework.IDPProblem.Processors;
 
+import immutables.*;
 import immutables.Immutable.*;
 
 import java.util.*;
 import java.util.Map.*;
 import java.util.logging.*;
 
-import aprove.Complexity.LowerBounds.Types.*;
-import aprove.DPFramework.*;
-import aprove.DPFramework.BasicStructures.*;
-import aprove.DPFramework.DPProblem.*;
-import aprove.DPFramework.IDPProblem.*;
-import aprove.DPFramework.IDPProblem.PfManager.*;
-import aprove.DPFramework.IDPProblem.Processors.JBCPreprocessing.*;
-import aprove.DPFramework.IDPProblem.idpGraph.*;
-import aprove.DPFramework.IDPProblem.idpGraph.Node;
-import aprove.DPFramework.IDPProblem.utility.*;
-import aprove.DPFramework.TRSProblem.*;
-import aprove.Framework.BasicStructures.*;
-import aprove.Framework.IRSwT.Processors.FilterProcessors.IRSwTTempSortFilterProcessor.*;
-import aprove.Framework.IntTRS.*;
-import aprove.Framework.Logic.*;
-import aprove.Framework.Utility.*;
-import aprove.Framework.Utility.GenericStructures.*;
-import aprove.Framework.Utility.Graph.*;
-import aprove.GraphUserInterface.Factories.Solvers.*;
-import aprove.Probabilistic.Termination.ADPProblem.AST.Processors.AST_ADPReductionPairProcessor.*;
-import aprove.ProofTree.Export.*;
-import aprove.ProofTree.Export.Utility.*;
-import aprove.ProofTree.Obligations.*;
-import aprove.ProofTree.Proofs.Proof.DefaultProof;
-import aprove.Strategies.Abortions.*;
-import aprove.Strategies.Annotations.*;
-import aprove.Strategies.ExecutableStrategies.*;
-import aprove.Strategies.UserStrategies.*;
+import aprove.prooftree.Export.*;
+import aprove.prooftree.Export.Utility.*;
+import aprove.prooftree.Obligations.*;
+import aprove.prooftree.Proofs.Proof.*;
+import aprove.strategies.Abortions.*;
+import aprove.strategies.Annotations.*;
+import aprove.strategies.ExecutableStrategies.*;
+import aprove.strategies.UserStrategies.*;
+import aprove.verification.complexity.LowerBounds.Types.*;
+import aprove.verification.dpframework.*;
+import aprove.verification.dpframework.BasicStructures.*;
+import aprove.verification.dpframework.DPProblem.*;
+import aprove.verification.dpframework.IDPProblem.*;
+import aprove.verification.dpframework.IDPProblem.Processors.JBCPreprocessing.*;
+import aprove.verification.dpframework.IDPProblem.idpGraph.*;
+import aprove.verification.dpframework.IDPProblem.idpGraph.Node;
+import aprove.verification.dpframework.IDPProblem.utility.*;
+import aprove.verification.dpframework.TRSProblem.*;
+import aprove.verification.oldframework.BasicStructures.*;
+import aprove.verification.oldframework.Logic.*;
+import aprove.verification.oldframework.Utility.*;
+import aprove.verification.oldframework.Utility.GenericStructures.*;
+import aprove.verification.oldframework.Utility.Graph.*;
 
 /**
  * Converts an ITRSProblem to an QTRSProblem.
@@ -247,7 +243,7 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
         final ImmutableSet<IdpEdge> idpEdges = idpGraph.getEdges();
         final IDPPredefinedMap predefinedMap = iDP.getRuleAnalysis().getPreDefinedMap();
 
-        final Map<Node, aprove.Framework.Utility.Graph.Node<Rule>> i2qNodes = new LinkedHashMap<Node, aprove.Framework.Utility.Graph.Node<Rule>>(
+        final Map<Node, aprove.verification.oldframework.Utility.Graph.Node<Rule>> i2qNodes = new LinkedHashMap<Node, aprove.verification.oldframework.Utility.Graph.Node<Rule>>(
                 idpNodes.size());
 
         for (final Node idpNode : idpNodes) {
@@ -259,7 +255,7 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
                 return null;
             }
             final Rule qdpRule = Rule.create(newLhs, newRhs);
-            final aprove.Framework.Utility.Graph.Node<Rule> qdpNode = new aprove.Framework.Utility.Graph.Node<Rule>(
+            final aprove.verification.oldframework.Utility.Graph.Node<Rule> qdpNode = new aprove.verification.oldframework.Utility.Graph.Node<Rule>(
                     qdpRule);
             i2qNodes.put(idpNode, qdpNode);
             qdpGraph.addNode(qdpNode);
@@ -284,9 +280,9 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
         }
 
         // Convert the rules to the type expected for TypeInference
-        Set<aprove.Complexity.LowerBounds.BasicStructures.Rule> newRules = new LinkedHashSet<>();
+        Set<aprove.verification.complexity.LowerBounds.BasicStructures.Rule> newRules = new LinkedHashSet<>();
         for (final GeneralizedRule rule : rules) {
-            newRules.add(new aprove.Complexity.LowerBounds.BasicStructures.Rule(rule.getLeft(), rule.getRight()));
+            newRules.add(new aprove.verification.complexity.LowerBounds.BasicStructures.Rule(rule.getLeft(), rule.getRight()));
         }
 
         return TypeInference.infer(newRules, allSymbols, definedSymbols);

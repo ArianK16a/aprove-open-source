@@ -4,49 +4,40 @@
  * @version $Id$
  */
 
-package aprove.DPFramework.IDPProblem.Processors;
+package aprove.verification.dpframework.IDPProblem.Processors;
 
+import immutables.*;
 import immutables.Immutable.*;
 
 import java.util.*;
 import java.util.Map.*;
 import java.util.logging.*;
 
-import aprove.Complexity.LowerBounds.Types.*;
-import aprove.DPFramework.*;
-import aprove.DPFramework.BasicStructures.*;
-import aprove.DPFramework.DPProblem.*;
-import aprove.DPFramework.IDPProblem.*;
-import aprove.DPFramework.IDPProblem.PfFunctions.*;
-import aprove.DPFramework.IDPProblem.PfFunctions.domains.*;
-import aprove.DPFramework.IDPProblem.PfManager.*;
-import aprove.DPFramework.IDPProblem.Processors.IDPRemoveIntProcessor.*;
-import aprove.DPFramework.IDPProblem.Processors.IDPToIRSProcessor.*;
-import aprove.DPFramework.IDPProblem.Processors.JBCPreprocessing.*;
-import aprove.DPFramework.IDPProblem.idpGraph.*;
-import aprove.DPFramework.IDPProblem.idpGraph.Node;
-import aprove.DPFramework.IDPProblem.utility.*;
-import aprove.DPFramework.TRSProblem.*;
-import aprove.Framework.Algebra.GeneralPolynomials.Coefficients.*;
-import aprove.Framework.BasicStructures.*;
-import aprove.Framework.Bytecode.Processors.ToIDPv1.*;
-import aprove.Framework.IRSwT.*;
-import aprove.Framework.IRSwT.Processors.FilterProcessors.IRSwTTempSortFilterProcessor.*;
-import aprove.Framework.IntTRS.*;
-import aprove.Framework.Logic.*;
-import aprove.Framework.Utility.*;
-import aprove.Framework.Utility.GenericStructures.*;
-import aprove.Framework.Utility.Graph.*;
-import aprove.GraphUserInterface.Factories.Solvers.*;
-import aprove.Probabilistic.Termination.ADPProblem.AST.Processors.AST_ADPReductionPairProcessor.*;
-import aprove.ProofTree.Export.*;
-import aprove.ProofTree.Export.Utility.*;
-import aprove.ProofTree.Obligations.*;
-import aprove.ProofTree.Proofs.Proof.DefaultProof;
-import aprove.Strategies.Abortions.*;
-import aprove.Strategies.Annotations.*;
-import aprove.Strategies.ExecutableStrategies.*;
-import aprove.Strategies.UserStrategies.*;
+import aprove.prooftree.Export.*;
+import aprove.prooftree.Export.Utility.*;
+import aprove.prooftree.Obligations.*;
+import aprove.prooftree.Proofs.Proof.*;
+import aprove.strategies.Abortions.*;
+import aprove.strategies.Annotations.*;
+import aprove.strategies.ExecutableStrategies.*;
+import aprove.strategies.UserStrategies.*;
+import aprove.verification.complexity.LowerBounds.Types.*;
+import aprove.verification.dpframework.*;
+import aprove.verification.dpframework.BasicStructures.*;
+import aprove.verification.dpframework.IDPProblem.*;
+import aprove.verification.dpframework.IDPProblem.PfFunctions.*;
+import aprove.verification.dpframework.IDPProblem.PfFunctions.domains.*;
+import aprove.verification.dpframework.IDPProblem.Processors.JBCPreprocessing.*;
+import aprove.verification.dpframework.IDPProblem.idpGraph.*;
+import aprove.verification.dpframework.IDPProblem.utility.*;
+import aprove.verification.oldframework.Algebra.GeneralPolynomials.Coefficients.*;
+import aprove.verification.oldframework.BasicStructures.*;
+import aprove.verification.oldframework.Bytecode.Processors.ToIDPv1.*;
+import aprove.verification.oldframework.IRSwT.*;
+import aprove.verification.oldframework.IntTRS.*;
+import aprove.verification.oldframework.Logic.*;
+import aprove.verification.oldframework.Utility.*;
+import aprove.verification.oldframework.Utility.GenericStructures.*;
 
 /**
  * Converts an IDPProblem to a smaller IDPProblem where only integer positions
@@ -291,9 +282,9 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
         }
 
         // Convert the rules to the type expected for TypeInference
-        Set<aprove.Complexity.LowerBounds.BasicStructures.Rule> newRules = new LinkedHashSet<>();
+        Set<aprove.verification.complexity.LowerBounds.BasicStructures.Rule> newRules = new LinkedHashSet<>();
         for (final GeneralizedRule rule : rules) {
-            newRules.add(new aprove.Complexity.LowerBounds.BasicStructures.Rule(rule.getLeft(), rule.getRight()));
+            newRules.add(new aprove.verification.complexity.LowerBounds.BasicStructures.Rule(rule.getLeft(), rule.getRight()));
         }
 
         return TypeInference.infer(newRules, allSymbols, definedSymbols);
