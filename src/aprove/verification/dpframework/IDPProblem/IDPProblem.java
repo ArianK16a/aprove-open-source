@@ -69,7 +69,7 @@ Immutable, HTML_Able, HasTRSTerms, ExternUsable, XMLObligationExportable,
     private final boolean minimal;
 
     private IDPProblem(final IIDependencyGraph idpGraph, final IDPRuleAnalysis ruleAnalysis, final boolean minimal, final IdpProcessorHistory procHistory) {
-        super("IDP", "Integer DP Problem");
+        super("IDP_v1", "Integer DP v1 Problem");
         this.R = ruleAnalysis.getRAnalysis().getRules();
         if (ruleAnalysis.getPAnalysis() != idpGraph.getNodeAnalysis()) {
             throw new IllegalArgumentException("idpGraph.getNodeAnalysis() must be the same as ruleAnalysis.getPAnalysis()");
@@ -180,17 +180,7 @@ Immutable, HTML_Able, HasTRSTerms, ExternUsable, XMLObligationExportable,
     @Override
     public String export(final Export_Util o, final VerbosityLevel verbosityLevel) {
         final StringBuilder s = new StringBuilder();
-        s.append(o.export("IDP problem:"));
-        s.append(o.cond_linebreak());
-        s.append("The following function symbols are pre-defined:");
-        s.append(o.cond_linebreak());
-        s.append(this.ruleAnalysis.getPreDefinedMap().export(o));
-        s.append(o.cond_linebreak());
-        s.append(o.cond_linebreak());
-        s.append("The following domains are used:");
-        s.append(o.cond_linebreak());
-        s.append(o.set(this.ruleAnalysis.getDomains(), Export_Util.NICE_SET));
-        s.append(o.cond_linebreak());
+        s.append(o.export("IDP_v1 problem:"));
         s.append(o.cond_linebreak());
         if (this.getR().isEmpty()) {
             s.append("R is empty.");
