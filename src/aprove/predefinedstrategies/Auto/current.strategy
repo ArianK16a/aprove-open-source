@@ -994,7 +994,7 @@ csrqtrs = Repeat(0,*,
 # if there is nothing predefined in there, just use the QDP framework
 itrs = First(
          ITRStoQTRS[Apply = CONSTONLY]:RunDefaultStrategyForObligation,
-         itrsToIdp:idpv2
+         itrsToIdp:idpv1
        )
 
 #itrsToIdpV2 = ITRSToIDPV2
@@ -1008,7 +1008,7 @@ itrsToIdp = ITRSToIDP:
 # ==================== IDPv1 ==================== #
 # =============================================== #
 
-#Only used by the JBC/LLVM people nowadays:
+# Used for ITRS and JBC (and LLVM via RunDefaultStrategyForObligation):
 idpv1MainLoop = First(
              IDPtoQDP[Apply = CONSTONLY]:RunDefaultStrategyForObligation,
              First(
