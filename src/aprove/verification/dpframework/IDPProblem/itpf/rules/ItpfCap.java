@@ -92,14 +92,14 @@ public class ItpfCap extends IItpfRule.ItpfRuleSkeleton implements IInitialItpfR
                         Position p = stackP.pop();
                         TRSTerm cL = stackL.pop();
                         TRSTerm cR = stackR.pop();
-                        if (!cL.isVariable() && !cL.isVariable()) {
+                        if (!cL.isVariable() && !cR.isVariable()) {
                             TRSFunctionApplication fL = (TRSFunctionApplication)cL;
                             TRSFunctionApplication fR = (TRSFunctionApplication)cR;
                             if (fL.getRootSymbol().equals(fR.getRootSymbol())) {
                                 stackL.addAll(fL.getArguments());
                                 stackR.addAll(fR.getArguments());
                                 int s = fL.getArguments().size();
-                                for (int i = 0; i < s; i--) {
+                                for (int i = 0; i < s; i++) {
                                     stackP.push(p.append(i));
                                 }
                             } else {
