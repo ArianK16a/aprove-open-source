@@ -155,6 +155,7 @@ public class IDPtoQDPProcessor extends IDPProcessor {
                     idpPRules, idpRRules, predefinedMap, true, true,
                     Integer.MAX_VALUE);
         }
+        final CollectionMap<FunctionSymbol, Integer> freeVarFilter = filter;
         if (filter == null) {
             filter = new CollectionMap<FunctionSymbol, Integer>();
         }
@@ -212,7 +213,7 @@ public class IDPtoQDPProcessor extends IDPProcessor {
         }
         return new IDPConversion<>(qDP, inverseNodes,
                 obl -> obl instanceof QDPProblem ? ((QDPProblem) obl).getP() : null,
-                new IDPtoQDPProof(qDP));
+                new IDPtoQDPProof(qDP, freeVarFilter));
     }
 
     /**
@@ -296,14 +297,37 @@ public class IDPtoQDPProcessor extends IDPProcessor {
 
         private final QDPProblem qdp;
 
-        public IDPtoQDPProof(final QDPProblem qdp) {
+        /**
+         * Positions removed because they contain free variables, or
+         * <code>null</code> if there are none.
+         */
+        private final CollectionMap<FunctionSymbol, Integer> freeVarFilter;
+
+        public IDPtoQDPProof(final QDPProblem qdp, final CollectionMap<FunctionSymbol, Integer> freeVarFilter) {
             this.qdp = qdp;
+            this.freeVarFilter = freeVarFilter;
         }
 
         @Override
         public String export(final Export_Util o, final VerbosityLevel level) {
+            final StringBuilder result = new StringBuilder();
             // FIXME: Make a real proof?
-            return "Represented integers and predefined function symbols by Terms";
+            result.append("Represented integers and predefined function symbols by Terms");
+            if (this.freeVarFilter != null) {
+                result.append(o.linebreak());
+                result.append("The following positions were removed because they contain free variables:");
+                result.append(o.linebreak());
+                IDPtoQDPProof.exportPositions(o, result, this.freeVarFilter);
+            }
+            return result.toString();
+        }
+
+        private static void exportPositions(final Export_Util o, final StringBuilder result,
+                final CollectionMap<FunctionSymbol, Integer> positions) {
+            for (final Map.Entry<FunctionSymbol, Collection<Integer>> entry : positions.entrySet()) {
+                result.append("function symbol: " + entry.getKey().getName() + ", removed positions: " + entry.getValue());
+                result.append(o.cond_linebreak());
+            }
         }
 
         @Override
