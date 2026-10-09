@@ -92,14 +92,14 @@ public class ItpfCap extends IItpfRule.ItpfRuleSkeleton implements IInitialItpfR
                         Position p = stackP.pop();
                         TRSTerm cL = stackL.pop();
                         TRSTerm cR = stackR.pop();
-                        if (!cL.isVariable() && !cL.isVariable()) {
+                        if (!cL.isVariable() && !cR.isVariable()) {
                             TRSFunctionApplication fL = (TRSFunctionApplication)cL;
                             TRSFunctionApplication fR = (TRSFunctionApplication)cR;
                             if (fL.getRootSymbol().equals(fR.getRootSymbol())) {
                                 stackL.addAll(fL.getArguments());
                                 stackR.addAll(fR.getArguments());
                                 int s = fL.getArguments().size();
-                                for (int i = 0; i < s; i--) {
+                                for (int i = 0; i < s; i++) {
                                     stackP.push(p.append(i));
                                 }
                             } else {
@@ -112,11 +112,14 @@ public class ItpfCap extends IItpfRule.ItpfRuleSkeleton implements IInitialItpfR
                         }
                     }
                     // we got one ore more differences, can we rewrite?
+                    // A single step must happen at or above all differences,
+                    // i.e., at a prefix of diffPos. It happens inside a capped
+                    // subterm, so some cap position must be a prefix of diffPos.
                     if (diffPos != null) {
-                        boolean rewriteable = true;
+                        boolean rewriteable = false;
                         for (Map.Entry<Position, ImmutableSet<GeneralizedRule>> e : cappedL.y.entrySet()) {
-                            if (!e.getKey().isPrefixOf(diffPos)) {
-                                rewriteable = false;
+                            if (e.getKey().isPrefixOf(diffPos)) {
+                                rewriteable = true;
                                 break;
                             }
                         }
