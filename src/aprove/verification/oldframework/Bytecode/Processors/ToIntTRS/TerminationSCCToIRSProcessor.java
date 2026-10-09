@@ -288,7 +288,7 @@ public class TerminationSCCToIRSProcessor extends Processor.ProcessorSkeleton {
      * @return a set of rules in which integer positions hidden deep in other terms are copied as additional arguments
      * of the enclosing defined symbol
      */
-    private static Set<IGeneralizedRule> copyIntVarsToTopPos(
+    public static Set<IGeneralizedRule> copyIntVarsToTopPos(
         final Set<IGeneralizedRule> rules,
         final IDPPredefinedMap predefinedMap)
     {
