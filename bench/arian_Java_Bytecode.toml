@@ -1,0 +1,9 @@
+FOLDER="../../TPDB-ARI"
+SUBDIR="Java_Bytecode"
+CATEGORY="default"
+TIMEOUT="10"
+IMAGE="aprove:itrs"
+OUTDIR="java-results/Java_Bytecode"
+APROVE_JAR="../dist/lib/aprove.jar"
+EXTENSION="jar"
+CORES_PER_FILE=8
