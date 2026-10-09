@@ -1009,7 +1009,7 @@ itrsToIdp = ITRSToIDP:
 # =============================================== #
 
 #Only used by the JBC/LLVM people nowadays:
-idpv1 = First(
+idpv1MainLoop = First(
              IDPtoQDP[Apply = CONSTONLY]:RunDefaultStrategyForObligation,
              First(
                Solve(
@@ -1017,10 +1017,22 @@ idpv1 = First(
                ),
                Any(
                  Solve(idpSlow),
+                 Solve(IDPtoIRS[TempFilter=True, Time=10000, Strategy="idpIRSRuleRemoval"]:idpv1MainLoop),
+                 Solve(IDPtoQDP[Ints=REMOVE, TempFilter=True, Time=10000, Strategy="idpQDPRuleRemoval"]:idpv1MainLoop),
                  Solve(IDPtoQDP[Apply = ALWAYSFILTER]:RunDefaultStrategyForObligation)
                )
              )
            )
+
+idpv1 = Any(
+             Solve(IDPtoIRS:RunDefaultStrategyForObligation),
+             Solve(IDPtoQDP[Ints=REMOVE]:RunDefaultStrategyForObligation),
+             idpv1MainLoop
+           )
+
+# strategies that only remove rules
+idpQDPRuleRemoval = Repeat(1,*,First(solver1, solver2))
+idpIRSRuleRemoval = irswtIRSRuleRemoval
 
 idpSlow = Repeat(0,*,
             Maybe(idpGraphOp):
