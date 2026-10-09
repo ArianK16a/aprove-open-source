@@ -524,7 +524,7 @@ public abstract class ToolBox {
                 result = result.plus(arguments.get(i).negate());
             }
         } else if (PREDEFINED.isDivOrMod(sym)) {
-            result = VarPolynomial.createVariable(ng.getFreshName("div", false));
+            result = VarPolynomial.createVariable(ng.getFreshName("divOrMod", false));
         } else if (PREDEFINED.isMul(sym)) {
             result = arguments.get(0);
             for (int i = 1; i < arguments.size(); i++) {
