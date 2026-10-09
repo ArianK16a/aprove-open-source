@@ -19,6 +19,7 @@ import aprove.prooftree.Proofs.Proof.*;
 import aprove.strategies.Abortions.*;
 import aprove.strategies.Annotations.*;
 import aprove.strategies.ExecutableStrategies.*;
+import aprove.strategies.UserStrategies.*;
 import aprove.verification.dpframework.*;
 import aprove.verification.dpframework.BasicStructures.*;
 import aprove.verification.dpframework.IDPProblem.*;
@@ -42,8 +43,29 @@ import aprove.verification.oldframework.Utility.GenericStructures.*;
  * This is done by removing all positions whose type is neither integer nor
  * boolean. Remaining nested terms that an IRS cannot express are replaced by
  * fresh variables.
+ *
+ * With <code>TempFilter</code>, the IRS is only used to remove nodes from the
+ * IDP, see {@link IDPTemporaryFilter}.
  */
 public class IDPtoIRSProcessor extends IDPProcessor {
+    // ================================================================================
+    // Properties
+    // ================================================================================
+
+    private final boolean tempFilter;
+    private final UserStrategy strategy;
+    private final int time;
+
+    // ================================================================================
+    // Constructors and Creators
+    // ================================================================================
+    @ParamsViaArgumentObject
+    public IDPtoIRSProcessor(final Arguments arguments) {
+        this.tempFilter = arguments.tempFilter;
+        this.strategy = arguments.strategy;
+        this.time = arguments.time;
+    }
+
     // ================================================================================
     // isApplicable
     // ================================================================================
@@ -65,18 +87,21 @@ public class IDPtoIRSProcessor extends IDPProcessor {
 
     @Override
     protected Result processIDPProblem(final IDPProblem iDP, final Abortion aborter) throws AbortionException {
-        final Pair<IRSProblem, IDPtoIRSProof> conversion = this.IDPtoIRS(iDP);
+        final IDPConversion<IGeneralizedRule> conversion = this.IDPtoIRS(iDP);
         if (conversion == null) {
             return ResultFactory.unsuccessful("The IDP is not well-typed.");
         }
-        return ResultFactory.proved(conversion.x, YNMImplication.SOUND, conversion.y);
+        if (!this.tempFilter) {
+            return ResultFactory.proved(conversion.getTarget(), YNMImplication.SOUND, conversion.getProof());
+        }
+        return IDPTemporaryFilter.run(iDP, conversion, this.strategy, this.time, aborter, this.rti, this);
     }
 
     /**
-     * @return the IRS together with the proof of the conversion, or
+     * @return the IRS together with the mapping back to the IDP nodes, or
      *         <code>null</code> if the IDP is not well-typed
      */
-    private Pair<IRSProblem, IDPtoIRSProof> IDPtoIRS(final IDPProblem iDP) {
+    private IDPConversion<IGeneralizedRule> IDPtoIRS(final IDPProblem iDP) {
         final ImmutableSet<GeneralizedRule> idpPRules = iDP.getP();
         final ImmutableSet<GeneralizedRule> idpRRules = iDP.getR();
         final IDPPredefinedMap predefinedMap = iDP.getRuleAnalysis().getPreDefinedMap();
@@ -111,9 +136,13 @@ public class IDPtoIRSProcessor extends IDPProcessor {
             filteredRules.put(node, GeneralizedRule.create(newL, newR));
         }
 
-        final IRSProblem irsProblem = this.toIRSProblem(filteredRules, predefinedMap);
+        // Maps each IRS rule back to the IDP node it was created from
+        final CollectionMap<IGeneralizedRule, Node> inverseNodes = new CollectionMap<>();
+        final IRSProblem irsProblem = this.toIRSProblem(filteredRules, predefinedMap, inverseNodes);
 
-        return new Pair<IRSProblem, IDPtoIRSProof>(irsProblem, new IDPtoIRSProof(filter));
+        return new IDPConversion<>(irsProblem, inverseNodes,
+                obl -> obl instanceof IRSwTProblem ? ((IRSwTProblem) obl).getRules() : null,
+                new IDPtoIRSProof(filter));
     }
 
     private class ArithmeticElimination {
@@ -230,9 +259,12 @@ public class IDPtoIRSProcessor extends IDPProcessor {
 
     /**
      * Converts the filtered rules of the IDP nodes to IRS rules.
+     *
+     * @param inverseNodes is filled with the IDP node each IRS rule was
+     *            created from
      */
     private IRSProblem toIRSProblem(final Map<Node, GeneralizedRule> filteredRules,
-            final IDPPredefinedMap predefinedMap) {
+            final IDPPredefinedMap predefinedMap, final CollectionMap<IGeneralizedRule, Node> inverseNodes) {
         final Set<IGeneralizedRule> rules = new LinkedHashSet<>();
         Set<String> usedNames = new LinkedHashSet<>();
         usedNames.addAll(CollectionUtils.getNames(CollectionUtils.getFunctionSymbols(filteredRules.values())));
@@ -282,6 +314,7 @@ public class IDPtoIRSProcessor extends IDPProcessor {
                     IGeneralizedRule iRule = IGeneralizedRule.create(newLhs, newRhs, cond);
                     // iRule = IDPv2ToIDPv1Utilities.shuffleMatchings(iRule);
                     rules.add(iRule);
+                    inverseNodes.add(iRule, entry.getKey());
                 }
             }
         }
@@ -313,6 +346,37 @@ public class IDPtoIRSProcessor extends IDPProcessor {
             }
 
             return result.toString();
+        }
+    }
+
+    // ================================================================================
+    // Arguments Class
+    // ================================================================================
+
+    public static class Arguments {
+        /**
+         * Whether the IRS is only used to remove nodes from the IDP. If true,
+         * `strategy` is executed on the IRS and the nodes whose rules it
+         * removed are removed from the IDP. If false, the IRS is returned.
+         */
+        boolean tempFilter = false;
+
+        /** Strategy to execute on the IRS if `tempFilter` is set. */
+        UserStrategy strategy;
+
+        /** Time limit for `strategy`. */
+        int time = 42042;
+
+        public void setTempFilter(final boolean tempFilter) {
+            this.tempFilter = tempFilter;
+        }
+
+        public void setStrategy(final String strategyName) {
+            this.strategy = new VariableStrategy(strategyName);
+        }
+
+        public void setTime(final int timeVal) {
+            this.time = timeVal;
         }
     }
 }
