@@ -13,6 +13,7 @@ import aprove.prooftree.Export.Utility.*;
 import aprove.prooftree.Proofs.Proof.*;
 import aprove.strategies.Abortions.*;
 import aprove.strategies.Annotations.*;
+import aprove.strategies.UserStrategies.*;
 import aprove.verification.dpframework.*;
 import aprove.verification.dpframework.BasicStructures.*;
 import aprove.verification.dpframework.DPProblem.*;
@@ -34,6 +35,9 @@ import immutables.*;
  *
  * This is done by converting integers (and the predefined functions)
  * to a pos-neg representation.
+ *
+ * With <code>TempFilter</code>, the QDP is only used to remove nodes from the
+ * IDP, see {@link IDPTemporaryFilter}.
  */
 public class IDPtoQDPProcessor extends IDPProcessor {
 
@@ -50,10 +54,17 @@ public class IDPtoQDPProcessor extends IDPProcessor {
      */
     private final int limit;
 
+    private final boolean tempFilter;
+    private final UserStrategy strategy;
+    private final int time;
+
     @ParamsViaArgumentObject
     public IDPtoQDPProcessor(final Arguments arguments) {
         this.apply = arguments.apply;
         this.limit = arguments.limit;
+        this.tempFilter = arguments.tempFilter;
+        this.strategy = arguments.strategy;
+        this.time = arguments.time;
     }
 
     /** Checks if this processor is applicable to the IDP.
@@ -106,12 +117,14 @@ public class IDPtoQDPProcessor extends IDPProcessor {
     protected Result processIDPProblem(final IDPProblem iDP, final Abortion aborter)
             throws AbortionException {
         try {
-            final QDPProblem qDP = this.IDPtoQDP(iDP);
-            if (qDP == null) {
+            final IDPConversion<Rule> conversion = this.IDPtoQDP(iDP);
+            if (conversion == null) {
                 return ResultFactory.unsuccessful();
             }
-            final IDPtoQDPProof proof = new IDPtoQDPProof(qDP);
-            return ResultFactory.proved(qDP, YNMImplication.SOUND, proof);
+            if (!this.tempFilter) {
+                return ResultFactory.proved(conversion.getTarget(), YNMImplication.SOUND, conversion.getProof());
+            }
+            return IDPTemporaryFilter.run(iDP, conversion, this.strategy, this.time, aborter, this.rti, this);
         } catch (final IntOutOfRangeException e) {
             final String message = "Transformation failed, because some integers" +
                     "were too big to be converted into pos/neg notation." +
@@ -122,7 +135,7 @@ public class IDPtoQDPProcessor extends IDPProcessor {
         }
     }
 
-    private QDPProblem IDPtoQDP(final IDPProblem iDP)
+    private IDPConversion<Rule> IDPtoQDP(final IDPProblem iDP)
             throws IntOutOfRangeException {
         // Use linked sets here just for user-friendliness. We want the
         // transformed "real" rules first and the generated rules last.
@@ -176,7 +189,10 @@ public class IDPtoQDPProcessor extends IDPProcessor {
             rules.add(rule);
         }
 
-        final Graph<Rule, ?> qdpGraph = this.createQDPGraph(iDP, npMan, freshNameMap, takenSymbols, filter);
+        // Maps each QDP pair back to the IDP nodes it was created from
+        final CollectionMap<Rule, Node> inverseNodes = new CollectionMap<>();
+        final Graph<Rule, ?> qdpGraph =
+            this.createQDPGraph(iDP, npMan, freshNameMap, takenSymbols, filter, inverseNodes);
         if (qdpGraph == null) {
             return null;
         }
@@ -188,9 +204,15 @@ public class IDPtoQDPProcessor extends IDPProcessor {
         rules.addAll(rulesForPredefs);
         qTerms.addAll(CollectionUtils.getLeftHandSides(rulesForPredefs));
 
-        return QDPProblem.create(qdpGraph,
+        final QDPProblem qDP = QDPProblem.create(qdpGraph,
                 QTRSProblem.create(ImmutableCreator.create(rules), qTerms),
                 iDPisMinimal);
+        if (qDP == null) {
+            return null;
+        }
+        return new IDPConversion<>(qDP, inverseNodes,
+                obl -> obl instanceof QDPProblem ? ((QDPProblem) obl).getP() : null,
+                new IDPtoQDPProof(qDP));
     }
 
     /**
@@ -227,8 +249,9 @@ public class IDPtoQDPProcessor extends IDPProcessor {
      * @param takenSymbols
      * @param freshNameMap
      * @param filter
+     * @param inverseNodes is filled with the IDP nodes each QDP pair was created from
      */
-    private Graph<Rule, ?> createQDPGraph(final IDPProblem iDP, final PredefinedFunctionsManagerNegPos npMan, final Map<FunctionSymbol, FunctionSymbol> freshNameMap, final Set<FunctionSymbol> takenSymbols, final CollectionMap<FunctionSymbol, Integer> filter)
+    private Graph<Rule, ?> createQDPGraph(final IDPProblem iDP, final PredefinedFunctionsManagerNegPos npMan, final Map<FunctionSymbol, FunctionSymbol> freshNameMap, final Set<FunctionSymbol> takenSymbols, final CollectionMap<FunctionSymbol, Integer> filter, final CollectionMap<Rule, Node> inverseNodes)
             throws IntOutOfRangeException {
 
         final Graph<Rule, ?> qdpGraph = new Graph<Rule, Void>();
@@ -254,6 +277,7 @@ public class IDPtoQDPProcessor extends IDPProcessor {
                 new aprove.verification.oldframework.Utility.Graph.Node<Rule>(qdpRule);
             i2qNodes.put(idpNode, qdpNode);
             qdpGraph.addNode(qdpNode);
+            inverseNodes.add(qdpRule, idpNode);
         }
 
         for (final Node idpNode : idpNodes) {
@@ -294,5 +318,30 @@ public class IDPtoQDPProcessor extends IDPProcessor {
 
         // max absolute value of integer literal accepted for conversion
         public int limit = 1023;
+
+        /**
+         * Whether the QDP is only used to remove nodes from the IDP. If true,
+         * `strategy` is executed on the QDP and the nodes whose pairs it
+         * removed are removed from the IDP. If false, the QDP is returned.
+         */
+        boolean tempFilter = false;
+
+        /** Strategy to execute on the QDP if `tempFilter` is set. */
+        UserStrategy strategy;
+
+        /** Time limit for `strategy`. */
+        int time = 42042;
+
+        public void setTempFilter(final boolean tempFilter) {
+            this.tempFilter = tempFilter;
+        }
+
+        public void setStrategy(final String strategyName) {
+            this.strategy = new VariableStrategy(strategyName);
+        }
+
+        public void setTime(final int timeVal) {
+            this.time = timeVal;
+        }
     }
 }
