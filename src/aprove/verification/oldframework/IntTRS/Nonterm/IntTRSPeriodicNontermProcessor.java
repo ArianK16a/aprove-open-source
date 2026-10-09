@@ -75,7 +75,7 @@ public class IntTRSPeriodicNontermProcessor extends IntTRSNontermProcessor {
 
         final IDPPredefinedMap predefMap = IDPPredefinedMap.DEFAULT_MAP;
         final FunctionSymbol divSym = predefMap.getSym(Func.Div, DomainFactory.INTEGERS);
-        final FunctionSymbol modSym = predefMap.getSym(Func.Div, DomainFactory.INTEGERS);
+        final FunctionSymbol modSym = predefMap.getSym(Func.Mod, DomainFactory.INTEGERS);
         for (final IGeneralizedRule r : problem.getRules()) {
             final Set<FunctionSymbol> usedSyms = r.getFunctionSymbols();
             if (usedSyms.contains(divSym) || usedSyms.contains(modSym)) {
