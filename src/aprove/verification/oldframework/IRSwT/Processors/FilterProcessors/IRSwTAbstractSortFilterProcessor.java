@@ -28,8 +28,8 @@ public abstract class IRSwTAbstractSortFilterProcessor extends Processor.Process
     public class Arguments {
         /**
          * If set to true, this processor will be unsuccessful when
-         * it cannot filter anything. Useful for checking whether or
-         * not any integers/terms are occurring.
+         * it filters something. Useful for checking whether or not
+         * any integers/terms are occurring.
          * Default: false.
          */
         boolean noSuccIfChanged;
