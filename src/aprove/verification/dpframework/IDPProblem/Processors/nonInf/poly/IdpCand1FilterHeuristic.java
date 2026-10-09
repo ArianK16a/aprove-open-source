@@ -75,12 +75,12 @@ public class IdpCand1FilterHeuristic extends AbstractFilterHeuristic {
         final IDPPredefinedMap predefinedMap) {
         if (t.isVariable()) {
             final TRSVariable v = (TRSVariable) t;
+            Set<Pair<FunctionSymbol, Integer>> varPos = variablePositions.get(v);
+            if (varPos == null) {
+                varPos = new LinkedHashSet<Pair<FunctionSymbol, Integer>>();
+                variablePositions.put(v, varPos);
+            }
             if (addPath) {
-                Set<Pair<FunctionSymbol, Integer>> varPos = variablePositions.get(v);
-                if (varPos == null) {
-                    varPos = new LinkedHashSet<Pair<FunctionSymbol, Integer>>();
-                    variablePositions.put(v, varPos);
-                }
                 varPos.addAll(currentPath);
             }
             if (relational) {
