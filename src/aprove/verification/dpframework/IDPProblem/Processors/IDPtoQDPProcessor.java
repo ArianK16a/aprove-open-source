@@ -162,11 +162,11 @@ public class IDPtoQDPProcessor extends IDPProcessor {
 
         for (final GeneralizedRule r : idpRRules) {
             final TRSFunctionApplication newL =
-                    (TRSFunctionApplication) HelperClass.remove(
-                            npMan.extractTerm(r.getLeft()), filter, freshNameMap, takenSymbols, predefinedMap);
+                    (TRSFunctionApplication) npMan.extractTerm(HelperClass.remove(
+                            r.getLeft(), filter, freshNameMap, takenSymbols, predefinedMap));
             final TRSTerm newR =
-                    HelperClass.remove(
-                            npMan.extractTerm(r.getRight()), filter, freshNameMap, takenSymbols, predefinedMap);
+                    npMan.extractTerm(HelperClass.remove(
+                            r.getRight(), filter, freshNameMap, takenSymbols, predefinedMap));
 
             if (!newL.getVariables().containsAll(newR.getVariables())) {
                 return null;
@@ -215,8 +215,8 @@ public class IDPtoQDPProcessor extends IDPProcessor {
         // postprocess those qTerms by npMan, too
         for (final TRSFunctionApplication origQTerm : explicitOrigQTerms) {
             final TRSFunctionApplication newQTerm =
-                    (TRSFunctionApplication) HelperClass.remove(
-                            npMan.extractTerm(origQTerm), filter, freshNameMap, takenSymbols, predefinedMap);
+                    (TRSFunctionApplication) npMan.extractTerm(HelperClass.remove(
+                            origQTerm, filter, freshNameMap, takenSymbols, predefinedMap));
             qTerms.add(newQTerm);
         }
         return qTerms;
@@ -241,11 +241,11 @@ public class IDPtoQDPProcessor extends IDPProcessor {
 
         for (final Node idpNode : idpNodes) {
             final TRSFunctionApplication newLhs =
-                    (TRSFunctionApplication) HelperClass.remove(
-                            npMan.extractTerm(idpNode.rule.getLeft()), filter, freshNameMap, takenSymbols, predefinedMap);
+                    (TRSFunctionApplication) npMan.extractTerm(HelperClass.remove(
+                            idpNode.rule.getLeft(), filter, freshNameMap, takenSymbols, predefinedMap));
             final TRSTerm newRhs =
-                    HelperClass.remove(
-                            npMan.extractTerm(idpNode.rule.getRight()), filter, freshNameMap, takenSymbols, predefinedMap);
+                    npMan.extractTerm(HelperClass.remove(
+                            idpNode.rule.getRight(), filter, freshNameMap, takenSymbols, predefinedMap));
             if (!newLhs.getVariables().containsAll(newRhs.getVariables())) {
                 return null;
             }
