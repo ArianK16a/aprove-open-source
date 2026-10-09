@@ -1230,14 +1230,14 @@ jbcGraph = Any(
                 )
               )
 
-jbcGraphSCC = jbcGraphSCCIRS
+jbcGraphSCC = jbcGraphSCCIDPv1
 
 jbcGraphSCCFast = jbcGraphSCCIRS
 jbcGraphSCCSlow = jbcGraphSCCIDPv1
 jbcGraphSCCIDPv2 = TerminationSCCToIDPv2[CleanRules=False]:
                    jbcIDPv2
 
-jbcGraphSCCIDPv1 = TerminationSCCToIDPv1[EncodeStaticFields=True, EncodeReferenceTypesAsTerms=True, EncodePathLength=False]:
+jbcGraphSCCIDPv1 = TerminationSCCToIDPv1[EncodeStaticFields=True, EncodeReferenceTypesAsTerms=True, EncodePathLength=False, TryQDPExport=False]:
                    jbcIDPv1
 
 
@@ -1245,18 +1245,7 @@ jbcGraphSCCIRS = TerminationSCCToIRS[EncodeStaticFields=True, EncodeArrayLengthS
 
 
 jbcIDPv2 = idp
-jbcIDPv1 = First(
-             IDPtoQDP[Apply = CONSTONLY]:RunDefaultStrategyForObligation,
-             First(
-               Solve(
-                 Timer(12000, idpFast)
-               ),
-               AnyDelay(5000,
-                 Solve(idpSlow),
-                 Solve(IDPtoQDP[Apply = ALWAYSFILTER]:RunDefaultStrategyForObligation)
-               )
-             )
-           )
+jbcIDPv1 = idpv1
 
 jbcComplexity =
   CombineParallel(
