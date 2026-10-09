@@ -1,0 +1,9 @@
+FOLDER="../../TPDB-small"
+SUBDIR="Java_Bytecode_Recursive"
+CATEGORY="default"
+TIMEOUT="30"
+IMAGE="aprove:itrs"
+OUTDIR="small-results/Java_Bytecode_Recursive"
+APROVE_JAR="../dist/lib/aprove.jar"
+EXTENSION="jar"
+CORES_PER_FILE=8

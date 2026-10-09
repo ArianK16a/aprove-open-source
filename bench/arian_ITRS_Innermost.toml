@@ -1,0 +1,9 @@
+FOLDER="../../TPDB"
+SUBDIR="Integer_TRS_Innermost"
+CATEGORY="Mixed_ITRS_2014"
+TIMEOUT="10"
+IMAGE="aprove:itrs"
+OUTDIR="example_results/ITRS_Innermost"
+APROVE_JAR="../dist/lib/aprove.jar"
+EXTENSION="itrs"
+CORES_PER_FILE=8
