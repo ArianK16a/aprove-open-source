@@ -33,8 +33,9 @@ import immutables.*;
 
 /** Converts an ITRSProblem to an QTRSProblem.
  *
- * This is done by converting integers (and the predefined functions)
- * to a pos-neg representation.
+ * Depending on {@link IntHandling}, this is done by converting integers (and
+ * the predefined functions) to a pos-neg representation or by removing all
+ * integer and boolean positions.
  *
  * With <code>TempFilter</code>, the QDP is only used to remove nodes from the
  * IDP, see {@link IDPTemporaryFilter}.
@@ -54,6 +55,11 @@ public class IDPtoQDPProcessor extends IDPProcessor {
      */
     private final int limit;
 
+    /**
+     * How are integers represented in the QDP?
+     */
+    private final IntHandling ints;
+
     private final boolean tempFilter;
     private final UserStrategy strategy;
     private final int time;
@@ -62,6 +68,7 @@ public class IDPtoQDPProcessor extends IDPProcessor {
     public IDPtoQDPProcessor(final Arguments arguments) {
         this.apply = arguments.apply;
         this.limit = arguments.limit;
+        this.ints = arguments.ints;
         this.tempFilter = arguments.tempFilter;
         this.strategy = arguments.strategy;
         this.time = arguments.time;
@@ -108,6 +115,11 @@ public class IDPtoQDPProcessor extends IDPProcessor {
             throw new aprove.verification.oldframework.Exceptions.NotYetHandledException("Check for "
                     + this.apply + " not handled yet!");
         }
+        if (this.ints == IntHandling.REMOVE) {
+            // Restricted integers, bitwise operations and free variables in
+            // integer positions are removed anyway
+            return true;
+        }
         return !ruleA.hasRestrictedInt()
             && !ruleA.hasBitwiseOps()
             && (this.apply == ToTermApplicability.ALWAYSFILTER || ruleA.satVarCondition());
@@ -149,10 +161,57 @@ public class IDPtoQDPProcessor extends IDPProcessor {
         final IDPPredefinedMap predefinedMap = iDP.getRuleAnalysis().getPreDefinedMap();
         final boolean iDPisMinimal = iDP.isMinimal();
 
+        // beware of name clashes
+        final Set<HasFunctionSymbols> forbiddenSymbols = new LinkedHashSet<HasFunctionSymbols>();
+        forbiddenSymbols.addAll(explicitOrigQTerms);
+        forbiddenSymbols.addAll(idpPRules);
+        forbiddenSymbols.addAll(idpRRules);
+        final Set<FunctionSymbol> takenSymbols =
+                CollectionUtils.getFunctionSymbols(forbiddenSymbols);
+
+        // With Ints=REMOVE, first remove all integer and boolean positions.
+        // The rest of the conversion works on the remaining rules.
+        CollectionMap<FunctionSymbol, Integer> typeFilter = null;
+        if (this.ints == IntHandling.REMOVE) {
+            final Set<GeneralizedRule> allRules = new LinkedHashSet<GeneralizedRule>();
+            allRules.addAll(idpRRules);
+            allRules.addAll(idpPRules);
+            typeFilter = IDPTypeFilter.getIntOrBoolPositions(allRules, predefinedMap);
+            if (typeFilter == null) {
+                // not well-typed
+                return null;
+            }
+        }
+        final Map<FunctionSymbol, FunctionSymbol> typeNameMap = new LinkedHashMap<FunctionSymbol, FunctionSymbol>();
+        final Map<Node, GeneralizedRule> pRules = new LinkedHashMap<Node, GeneralizedRule>();
+        for (final Node node : iDP.getIdpGraph().getNodes()) {
+            pRules.put(node,
+                    IDPtoQDPProcessor.remove(node.getRule(), typeFilter, typeNameMap, takenSymbols, predefinedMap));
+        }
+        final Set<GeneralizedRule> rRules = new LinkedHashSet<GeneralizedRule>();
+        for (final GeneralizedRule r : idpRRules) {
+            final GeneralizedRule rule =
+                IDPtoQDPProcessor.remove(r, typeFilter, typeNameMap, takenSymbols, predefinedMap);
+            if (!rule.getLeft().getVariables().containsAll(rule.getRight().getVariables())) {
+                // The type filter only leaves a variable unbound if it occurs
+                // in integer or boolean positions on the lhs and at the root
+                // of the rhs (all other positions of the rhs would be removed
+                // as well). So the rule computes an integer or a boolean and
+                // all calls of its root symbol have been removed.
+                continue;
+            }
+            rRules.add(rule);
+        }
+        final Set<TRSFunctionApplication> filteredQTerms = new LinkedHashSet<TRSFunctionApplication>();
+        for (final TRSFunctionApplication q : explicitOrigQTerms) {
+            filteredQTerms.add(typeFilter == null ? q : (TRSFunctionApplication) HelperClass.remove(
+                    q, typeFilter, typeNameMap, takenSymbols, predefinedMap));
+        }
+
         CollectionMap<FunctionSymbol, Integer> filter = null;
         if (this.apply == ToTermApplicability.ALWAYSFILTER) {
             filter = FreeVariableTermRemover.getPositionFilter(
-                    idpPRules, idpRRules, predefinedMap, true, true,
+                    new LinkedHashSet<GeneralizedRule>(pRules.values()), rRules, predefinedMap, true, true,
                     Integer.MAX_VALUE);
         }
         final CollectionMap<FunctionSymbol, Integer> freeVarFilter = filter;
@@ -160,21 +219,13 @@ public class IDPtoQDPProcessor extends IDPProcessor {
             filter = new CollectionMap<FunctionSymbol, Integer>();
         }
 
-        // beware of name clashes
-        final Set<HasFunctionSymbols> forbiddenSymbols = new LinkedHashSet<HasFunctionSymbols>();
-        forbiddenSymbols.addAll(explicitOrigQTerms);
-        forbiddenSymbols.addAll(idpPRules);
-        forbiddenSymbols.addAll(idpRRules);
-
         final PredefinedFunctionsManagerNegPos npMan =
             PredefinedFunctionsManagerNegPos.create(predefinedMap, forbiddenSymbols, this.limit);
 
         final Map<FunctionSymbol, FunctionSymbol> freshNameMap =
             new LinkedHashMap<FunctionSymbol, FunctionSymbol>();
-        final Set<FunctionSymbol> takenSymbols =
-                CollectionUtils.getFunctionSymbols(forbiddenSymbols);
 
-        for (final GeneralizedRule r : idpRRules) {
+        for (final GeneralizedRule r : rRules) {
             final TRSFunctionApplication newL =
                     (TRSFunctionApplication) npMan.extractTerm(HelperClass.remove(
                             r.getLeft(), filter, freshNameMap, takenSymbols, predefinedMap));
@@ -193,11 +244,11 @@ public class IDPtoQDPProcessor extends IDPProcessor {
         // Maps each QDP pair back to the IDP nodes it was created from
         final CollectionMap<Rule, Node> inverseNodes = new CollectionMap<>();
         final Graph<Rule, ?> qdpGraph =
-            this.createQDPGraph(iDP, npMan, freshNameMap, takenSymbols, filter, inverseNodes);
+            this.createQDPGraph(iDP, pRules, npMan, freshNameMap, takenSymbols, filter, inverseNodes);
         if (qdpGraph == null) {
             return null;
         }
-        final Set<TRSFunctionApplication> qTerms = this.createQdpQTerms(explicitOrigQTerms, npMan, predefinedMap, freshNameMap, takenSymbols, filter);
+        final Set<TRSFunctionApplication> qTerms = this.createQdpQTerms(filteredQTerms, npMan, predefinedMap, freshNameMap, takenSymbols, filter);
 
         // The generated rules do not add new PAIRS, but we need to add the
         // rules generated for the PAIRS to the RULES section too.
@@ -213,7 +264,25 @@ public class IDPtoQDPProcessor extends IDPProcessor {
         }
         return new IDPConversion<>(qDP, inverseNodes,
                 obl -> obl instanceof QDPProblem ? ((QDPProblem) obl).getP() : null,
-                new IDPtoQDPProof(qDP, freeVarFilter));
+                new IDPtoQDPProof(qDP, typeFilter, freeVarFilter));
+    }
+
+    /**
+     * Removes the positions in the filter from both sides of the rule.
+     *
+     * @return the rule itself if there is no filter
+     */
+    private static GeneralizedRule remove(final GeneralizedRule rule,
+            final CollectionMap<FunctionSymbol, Integer> filter,
+            final Map<FunctionSymbol, FunctionSymbol> freshNameMap, final Set<FunctionSymbol> takenSymbols,
+            final IDPPredefinedMap predefinedMap) {
+        if (filter == null) {
+            return rule;
+        }
+        return GeneralizedRule.create(
+                (TRSFunctionApplication) HelperClass.remove(rule.getLeft(), filter, freshNameMap, takenSymbols,
+                        predefinedMap),
+                HelperClass.remove(rule.getRight(), filter, freshNameMap, takenSymbols, predefinedMap));
     }
 
     /**
@@ -224,7 +293,7 @@ public class IDPtoQDPProcessor extends IDPProcessor {
      * @param freshNameMap
      */
     private Set<TRSFunctionApplication> createQdpQTerms(
-            final ImmutableSet<TRSFunctionApplication> explicitOrigQTerms,
+            final Set<TRSFunctionApplication> explicitOrigQTerms,
             final PredefinedFunctionsManagerNegPos npMan,
             final IDPPredefinedMap predefinedMap,
             final Map<FunctionSymbol, FunctionSymbol> freshNameMap,
@@ -247,12 +316,14 @@ public class IDPtoQDPProcessor extends IDPProcessor {
 
     /**
      * create QDP graph from IDP graph
+     * @param pRules the rules of the IDP nodes, after removing the positions
+     *        of the type filter
      * @param takenSymbols
      * @param freshNameMap
      * @param filter
      * @param inverseNodes is filled with the IDP nodes each QDP pair was created from
      */
-    private Graph<Rule, ?> createQDPGraph(final IDPProblem iDP, final PredefinedFunctionsManagerNegPos npMan, final Map<FunctionSymbol, FunctionSymbol> freshNameMap, final Set<FunctionSymbol> takenSymbols, final CollectionMap<FunctionSymbol, Integer> filter, final CollectionMap<Rule, Node> inverseNodes)
+    private Graph<Rule, ?> createQDPGraph(final IDPProblem iDP, final Map<Node, GeneralizedRule> pRules, final PredefinedFunctionsManagerNegPos npMan, final Map<FunctionSymbol, FunctionSymbol> freshNameMap, final Set<FunctionSymbol> takenSymbols, final CollectionMap<FunctionSymbol, Integer> filter, final CollectionMap<Rule, Node> inverseNodes)
             throws IntOutOfRangeException {
 
         final Graph<Rule, ?> qdpGraph = new Graph<Rule, Void>();
@@ -264,12 +335,13 @@ public class IDPtoQDPProcessor extends IDPProcessor {
             new LinkedHashMap<Node, aprove.verification.oldframework.Utility.Graph.Node<Rule>>(idpNodes.size());
 
         for (final Node idpNode : idpNodes) {
+            final GeneralizedRule rule = pRules.get(idpNode);
             final TRSFunctionApplication newLhs =
                     (TRSFunctionApplication) npMan.extractTerm(HelperClass.remove(
-                            idpNode.rule.getLeft(), filter, freshNameMap, takenSymbols, predefinedMap));
+                            rule.getLeft(), filter, freshNameMap, takenSymbols, predefinedMap));
             final TRSTerm newRhs =
                     npMan.extractTerm(HelperClass.remove(
-                            idpNode.rule.getRight(), filter, freshNameMap, takenSymbols, predefinedMap));
+                            rule.getRight(), filter, freshNameMap, takenSymbols, predefinedMap));
             if (!newLhs.getVariables().containsAll(newRhs.getVariables())) {
                 return null;
             }
@@ -298,24 +370,42 @@ public class IDPtoQDPProcessor extends IDPProcessor {
         private final QDPProblem qdp;
 
         /**
+         * Positions removed because their type is integer or boolean, or
+         * <code>null</code> if the integers are encoded.
+         */
+        private final CollectionMap<FunctionSymbol, Integer> typeFilter;
+
+        /**
          * Positions removed because they contain free variables, or
          * <code>null</code> if there are none.
          */
         private final CollectionMap<FunctionSymbol, Integer> freeVarFilter;
 
-        public IDPtoQDPProof(final QDPProblem qdp, final CollectionMap<FunctionSymbol, Integer> freeVarFilter) {
+        public IDPtoQDPProof(final QDPProblem qdp, final CollectionMap<FunctionSymbol, Integer> typeFilter,
+                final CollectionMap<FunctionSymbol, Integer> freeVarFilter) {
             this.qdp = qdp;
+            this.typeFilter = typeFilter;
             this.freeVarFilter = freeVarFilter;
         }
 
         @Override
         public String export(final Export_Util o, final VerbosityLevel level) {
             final StringBuilder result = new StringBuilder();
-            // FIXME: Make a real proof?
-            result.append("Represented integers and predefined function symbols by Terms");
-            if (this.freeVarFilter != null) {
+            if (this.typeFilter == null) {
+                // FIXME: Make a real proof?
+                result.append("Represented integers and predefined function symbols by Terms");
+            } else {
+                result.append("The following positions were removed because their type is integer or boolean:");
                 result.append(o.linebreak());
-                result.append("The following positions were removed because they contain free variables:");
+                IDPtoQDPProof.exportPositions(o, result, this.typeFilter);
+            }
+            if (this.freeVarFilter != null) {
+                if (this.typeFilter == null) {
+                    result.append(o.linebreak());
+                }
+                result.append(this.typeFilter == null
+                        ? "The following positions were removed because they contain free variables:"
+                        : "Afterwards, the following positions were removed because they contain free variables:");
                 result.append(o.linebreak());
                 IDPtoQDPProof.exportPositions(o, result, this.freeVarFilter);
             }
@@ -336,12 +426,26 @@ public class IDPtoQDPProcessor extends IDPProcessor {
         }
     }
 
+    /**
+     * How integers are represented in the resulting QDP.
+     */
+    public static enum IntHandling {
+        /** Convert integers and predefined functions to pos/neg terms. */
+        ENCODE,
+
+        /** Remove all integer and boolean argument positions. */
+        REMOVE,
+    }
+
     public static class Arguments {
         // when do we want to be applicable?
         public ToTermApplicability apply = ToTermApplicability.ALWAYS;
 
         // max absolute value of integer literal accepted for conversion
         public int limit = 1023;
+
+        // how integers are represented in the QDP
+        public IntHandling ints = IntHandling.ENCODE;
 
         /**
          * Whether the QDP is only used to remove nodes from the IDP. If true,
