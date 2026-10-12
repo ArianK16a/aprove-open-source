@@ -1,0 +1,4 @@
+jars/
+runs/*/out/
+runs/*/strategy.strategy
+runs/*.log
