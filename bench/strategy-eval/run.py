@@ -66,7 +66,7 @@ def main() -> None:
     p.add_argument("--jar", type=Path, default=REPO / "dist/lib/aprove.jar")
     p.add_argument("-j", "--jobs", type=int, default=2)
     p.add_argument("--cores", type=int, default=4, help="cores per job")
-    p.add_argument("--mem", default="3g")
+    p.add_argument("--mem", default="3g", help="heap per file, or none for the JVM default (1/4 of the RAM)")
     p.add_argument("--resume", action="store_true", help="skip files that already have a result")
     args = p.parse_args()
 
@@ -97,7 +97,8 @@ def main() -> None:
             slot = free_slots.pop()
         try:
             cpus = f"{slot * args.cores}-{slot * args.cores + args.cores - 1}"
-            cmd = ["taskset", "-c", cpus, "java", "-ea", f"-Xmx{args.mem}", "-jar", str(args.jar),
+            xmx = [] if args.mem == "none" else [f"-Xmx{args.mem}"]  # "none": JVM default heap
+            cmd = ["taskset", "-c", cpus, "java", "-ea", *xmx, "-jar", str(args.jar),
                    "-m", "wst", "-p", "plain", "-t", str(args.timeout), "-s", str(strategy), str(path)]
             t0 = time.monotonic()
             # Own process group, so that solvers started by AProVE (minisat, yices, ...) can be
