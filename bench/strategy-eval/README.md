@@ -35,6 +35,10 @@ A run name is `<prefix><variant>`; the prefix tells the jar and the machine:
 | `h-` | 094bee3ece (IRS fixes) | laptop |
 | `k-` | 25bc35eba5 (adds `NOTINTONLY`, `Ints=REMOVE` fails if nothing is removed) | laptop |
 | `t-` | 8ee98d809f (all crash fixes of 2026-10-12, same sources as the commit adding this workspace) | laptop |
+| `d-` | `852e64a802` (= `t-` sources, built from the tip of 2026-10-12; its built-in `current.strategy` is still the old `idpv1`, the runs pass `-s`) | desktop (Ryzen 9 7950X, 16 cores/32 threads, 61 GB), `JOBS=4` for `small`, `JOBS=8 MEM=5g` for the `*-full` sets |
+| `e-` | same jar | desktop, `JOBS=8 MEM=5g`, 30 s (placement check: `q-A q-D q-E q-G`) |
+| `f-` | same jar | desktop, `JOBS=8 MEM=5g`, 30 s (`Time=` of the temporary projections: `q-T3 q-T5 q-T20`) |
+| `g-` | same jar | desktop, `JOBS=4 MEM=12g`, **60 s** (`final` = the strategy now in `current.strategy`) |
 
 The runs without prefix of rounds 1 to 3 and all `n-*` runs have unreliable times (orphaned
 SAT solvers, see the results file); only `c-`, `h-`, `k-` and `t-` runs are clean. Times of
@@ -100,7 +104,9 @@ python3 compare.py small --ref d-p2c --diff d-m0-main d-p2c d-p2
 python3 matrix.py small d-m0-main d-p2c d-p2
 ```
 
-Optional environment for a stronger machine: `JOBS` (files in parallel, default 2), `CORES`
+Optional environment for a stronger machine (`MEM=none` omits `-Xmx`; do not use it with many
+parallel files: on the 61 GB desktop 8 JVMs grew to 9-11 GB RSS each within 40 s and the machine
+started to swap. Use `MEM=<n>g` with JOBS x n below the RAM, e.g. `JOBS=4 MEM=12g`): `JOBS` (files in parallel, default 2), `CORES`
 (cores per file, default 4; job i is pinned to cores i*CORES .. i*CORES+CORES-1), `MEM`
 (heap per file, default `3g`). Keep `CORES=4` so that the results stay similar to the
 earlier ones, and raise `JOBS` (e.g. `JOBS=4` on 16 cores).
@@ -108,16 +114,31 @@ earlier ones, and raise `JOBS` (e.g. `JOBS=4` on 16 cores).
 A queue takes about 9 to 10 minutes per variant on `small` with `JOBS=2`. Run it in the
 background and wait for it to finish; its progress is in `runs/<run>_small.log`.
 
-## Resuming on another machine
+## Variant names that changed meaning
 
-The times measured on the laptop cannot be compared with a new machine, so the references
-have to be measured again there. With a jar of the current tip and a new prefix (`d-`):
+- `base-current` has empty definitions, i.e. it is whatever `current.strategy` of the working tree
+  is. Since 2026-10-12 that is the new `idpv1` (= `q-D` = `final`). The `d-old-current_*` runs
+  (renamed from `d-base-current_*`) were measured with the old `idpv1` of `aprove/main`; the
+  variant `old-current` reproduces it. Older prefixes (`h-`, `k-`, `t-`) `base-current` runs are
+  the old one too.
+- `final` has the explicit definitions of `q-D`, independent of the tree.
+- `q-E`, `q-G` (placement of the projections), `q-T3`, `q-T5`, `q-T20` (`Time=` of the
+  temporary projections) were added on 2026-10-12, see the results file.
+
+## Resuming on another machine (state of 2026-10-12, evening)
+
+The batch for the desktop is finished (prefixes `d-` to `g-`) and the winner (`q-D`) is in
+`current.strategy` on the branch `idpv1-strategy`. Nothing has to be re-run to continue. To
+re-measure something on the notebook, the jars are not in git, so build one first
+(`ant -f build-aprove.xml dist`, copy to `jars/aprove-<commit>.jar`) and use a new prefix; times
+of different machines must not be compared, so measure the reference variants (`old-current`,
+`final`) there as well:
 
 ```
-JAR=jars/aprove-<commit>.jar PREFIX=d- JOBS=<n> ./queue.sh small m0-main p2c p2 p2-t10 q-A q-B q-C q-D base-current
-python3 compare.py small --ref d-p2c --diff d-m0-main d-p2c d-p2 d-p2-t10 d-q-A d-q-B d-q-C d-q-D d-base-current
+JAR=jars/aprove-<commit>.jar PREFIX=n2- JOBS=2 ./queue.sh small old-current final
+python3 compare.py small --ref n2-final --diff n2-old-current n2-final
 ```
 
-Then follow "Status and next steps" in `IDP-strategy-results.md`. To try a new `idpv1` in
-AProVE itself, copy the definitions of the winning variant from `variants.sh` (or from
-`runs/<run>_small/strategy.strategy`) into `current.strategy`, but only after asking the user.
+Note that a jar built from the branch already contains the new `idpv1` as default strategy, but
+the runner always passes `-s` with the variant's strategy, so `old-current` still measures the
+old one. See "Status and next steps" in `IDP-strategy-results.md` for what is open.
