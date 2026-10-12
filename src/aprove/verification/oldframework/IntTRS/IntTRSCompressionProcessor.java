@@ -77,6 +77,10 @@ public class IntTRSCompressionProcessor extends Processor.ProcessorSkeleton {
                 }
             }
 
+            if (newRules.isEmpty()) {
+                // Without rules, the termination problem is solved
+                return ResultFactory.proved(new IntTRSCompressionProof());
+            }
             return ResultFactory.proved(intTRS.create(newRules, intTRS.getStartTerm()), YNMImplication.EQUIVALENT, new IntTRSCompressionProof());
         } else {
             return ResultFactory.unsuccessful();
