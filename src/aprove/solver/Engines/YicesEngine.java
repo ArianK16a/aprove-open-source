@@ -216,7 +216,11 @@ public class YicesEngine extends SMTEngine {
                         resMap.put(resx.toString(), resy);
                     } else {
                         // Variable result
-                        final String[] sArr = line.split(" ");
+                        String[] sArr = line.split(" ");
+                        if (sArr.length < 3 && it.hasNext()) {
+                            // a long value is continued in the next line
+                            sArr = (line + " " + it.next().trim()).split(" ");
+                        }
                         if (sArr.length != 3) {
                             if (!Globals.DEBUG_NONE) {
                                 System.err.println("line: ");
