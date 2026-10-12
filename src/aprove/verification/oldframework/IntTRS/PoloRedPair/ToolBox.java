@@ -523,6 +523,8 @@ public abstract class ToolBox {
             for (int i = 1; i < arguments.size(); i++) {
                 result = result.plus(arguments.get(i).negate());
             }
+        } else if (PREDEFINED.isUnaryMinus(sym)) {
+            result = arguments.get(0).negate();
         } else if (PREDEFINED.isDivOrMod(sym)) {
             result = VarPolynomial.createVariable(ng.getFreshName("divOrMod", false));
         } else if (PREDEFINED.isMul(sym)) {
