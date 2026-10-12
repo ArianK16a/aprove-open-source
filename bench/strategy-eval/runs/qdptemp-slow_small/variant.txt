@@ -1,0 +1,1 @@
+idpv1=Solve(Maybe(IDPtoQDP[Ints=REMOVE, TempFilter=True, Time=10000, Strategy="idpQDPRuleRemoval"]):idpSlow)

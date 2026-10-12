@@ -1,4 +1,4 @@
-FOLDER="../../TPDB-small"
+FOLDER="strategy-eval/TPDB-small"
 SUBDIR="Integer_TRS_Innermost"
 CATEGORY="Mixed_ITRS_2014"
 TIMEOUT="30"
