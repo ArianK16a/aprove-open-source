@@ -1,0 +1,1 @@
+idpv1MainLoop=First(IDPtoQDP[Apply = CONSTONLY]:RunDefaultStrategyForObligation, First(Solve(Timer(12000, idpFast)), Any(Solve(idpSlow), Solve(IDPtoQDP[Apply = ALWAYSFILTER]:RunDefaultStrategyForObligation))))

@@ -1,0 +1,2 @@
+idpv1=AnyDelay(2000, Any(AnyDelay(5000, Solve(IDPtoQDP[Apply = CONSTONLY]:RunDefaultStrategyForObligation), Solve(IDPtoQDP[Ints=REMOVE]:RunDefaultStrategyForObligation)), Solve(IDPtoIRS:RunDefaultStrategyForObligation)), idpv1Rest)
+idpv1Rest=First(Solve(Timer(12000, idpFast)), AnyDelay(5000, Solve(idpSlow), Solve(IDPtoQDP[Apply = ALWAYSFILTER]:RunDefaultStrategyForObligation)))

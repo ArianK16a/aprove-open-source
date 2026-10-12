@@ -1,0 +1,26 @@
+IDP strategies:
+
+* IDPtoQDP CONSTONLY
+ - Strong or fails fast -> should be tried first
+ 
+* IDPtoQDP ALWAYSFILTER
+ - encodes arithmetic in QDP, usually not the best method? test it!
+ 
+* IDPtoQDP int remove
+ - usually not very effective, conceptionally similar to CONSTONLY but it might not fail early, so probably should only run in paralll to other tactics
+ 
+* IDPtoIRS INTONLY
+  - usually the best option if applicable, but some examples also benefit from good techniques of the qdp encoding, test this
+ 
+ * IDPtoIRS remove
+  - often looses termination, but seems still very effective since it generates smaller problems and integers are often very relevant and sufficient for termination in practice it seems
+  
+ * IDPtoQDP temporary
+   - i don't know if that's effective? make sure it returns unsuccessful when no rules were removed, otherwise we might run the same IDP in parallel twice
+   
+ * IDPtoIRS temporary
+   - seems more effective, must also be tested.
+   
+ * idpSlow / idpFast
+   - graph operations and NonInf
+   - efficient techniques on the IDPs, probably worth to run parallel to some extent. Might make sense to stick to the original (aprove/main) delay and order.

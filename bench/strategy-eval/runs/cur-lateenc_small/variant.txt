@@ -1,0 +1,2 @@
+idpv1MainLoop=First(IDPtoQDP[Apply = CONSTONLY]:RunDefaultStrategyForObligation, First(Solve(Timer(12000, idpFast)), Any(Solve(idpSlow), Solve(IDPtoIRS[TempFilter=True, Time=10000, Strategy="idpIRSRuleRemoval"]:idpv1MainLoop), Solve(IDPtoQDP[Ints=REMOVE, TempFilter=True, Time=10000, Strategy="idpQDPRuleRemoval"]:idpv1MainLoop), Delay(15000, Solve(IDPtoQDP[Apply = ALWAYSFILTER]:RunDefaultStrategyForObligation)))))
+idpNonInfSlow=AnyDelay(10000, Any(idpNonInfIntSlow, idpNonInfIntShapedLR, idpNonInfIntShapedLL), idpNonInfIntVerySlow)

@@ -1,4 +1,4 @@
-FOLDER="../../TPDB-small"
+FOLDER="strategy-eval/TPDB-small"
 SUBDIR="Java_Bytecode_Recursive"
 CATEGORY="default"
 TIMEOUT="30"
