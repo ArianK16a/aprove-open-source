@@ -409,7 +409,7 @@ and the temporary IRS projection uses `Apply=NOTINTONLY`.
 
 (results follow)
 
-## Status and next steps (2026-10-12, evening)
+## Status and next steps (2026-10-12, evening; superseded by the last section of this file)
 
 Strategy series (one `idpv1` for ITRS and JBC, built up from `aprove/main`): cheap stage
 and normal projections are measured (series m and p); `p2c` is the best so far.
@@ -515,3 +515,227 @@ Other open points:
   fix changes which files reach `idpv1` at all, the baselines on the JBC sets have to be
   re-run with a new jar before comparing strategies there.
 - `JBCNonTerm` finds the NO for Velroyen08-moduloLower.jar only sometimes (timing).
+
+## Batch `d-` (desktop, 2026-10-12): all variants on `small`
+
+Machine: AMD Ryzen 9 7950X (16 cores / 32 threads, SMT siblings are `i` and `i+16`), 61 GB RAM.
+`JOBS=4 CORES=4 MEM=3g`: jobs are pinned to CPUs 0-15, so no two files share a physical core.
+Jar `jars/aprove-852e64a802.jar` (tip `852e64a`, includes all crash fixes of 10-12). 106 files, 30 s.
+Times are not comparable with the laptop (`t-`) runs; verdicts are.
+
+| Variant | Solved | YES | NO | MAYBE | KILLED | Total time |
+|---|---|---|---|---|---|---|
+| `d-m0-main` | 82 | 79 | 3 | 5 | 18 (+1 ERROR) | 866 s |
+| `d-p2c` | 89 | 86 | 3 | 5 | 12 | 609 s |
+| `d-p2` | 89 | 86 | 3 | 3 | 14 | 685 s |
+| `d-p2-t10` | 90 | 87 | 3 | 3 | 13 | 650 s |
+| `d-q-A` | 92 | 89 | 3 | 5 | 9 | 554 s |
+| `d-q-B` | 92 | 89 | 3 | 5 | 9 | 558 s |
+| `d-q-C` | 92 | 89 | 3 | 5 | 9 | 537 s |
+| `d-q-D` | 92 | 89 | 3 | 5 | 9 | 530 s |
+| `d-base-current` | 92 | 88 | 4 | 3 | 11 | 629 s |
+
+Per-file differences (`compare.py --ref d-p2c`, `matrix.py`):
+
+- `m0-main` vs. `p2c`: `p2c` gains 8 files (A17, poly1, poly2, BinarySearch, Norm, Matrix,
+  TaylorSeriesIte, juLinkedListCreateEquals) and loses only `choice.itrs` (m0 proves it in
+  25 s; it is KILLED in every other variant, including `base-current`). Cheap stage first is
+  clearly better. `choice.itrs` is a regression of the whole p/q family, not looked at yet.
+- `p2c` vs. `p2`: same verdicts, `p2c` 76 s faster. The 5 s head start does not pay.
+- `p2-t10` vs. `p2c`: +1 file (MinusUserDefined.jar, 17 s, KILLED in everything else), 40 s
+  slower. A late join helps one file and costs time elsewhere.
+- `q-A`, `q-B`, `q-C`, `q-D`: identical verdicts, +3 YES over `p2c`: PartitionList.jar,
+  juHashMapCreateIteratorKeyLoop.jar (4 s in all q), juHashMapCreateHashCode.jar (10-23 s).
+  Nothing lost. The temporary projections are what helps; their placement does not change
+  verdicts. Time differences (530-558 s) are 5% and mostly come from which of the 9 K files
+  hit 30 s vs. 45 s kills; treat as noise.
+- `base-current` (current.strategy as in the tree): 92 solved as well, but a different set:
+  it finds the NO of Velroyen08-moduloLower.jar and misses juHashMapCreateHashCode.jar;
+  Velroyen08-doubleNeg.jar is KILLED (45 s) there.
+
+Observation, not resolved: Velroyen08-moduloLower.jar. In `base-current` `JBCNonTerm` finds
+the NO at the termination graph in 9 ms (0.7 s total). In `p2c`/`q-*` the answer is MAYBE
+after 1.7 s, although the proof tree contains an `IntTRSPeriodicNontermProof` NO node below
+the `SCCToIDPv1Proof` (SOUND) step; a NO below a SOUND-only step does not imply NO for the
+program, so MAYBE is not wrong, but it means the `JBCNonTerm` branch of `jbcGraph` did not
+deliver in time. Whether the early end of the cheap path cancels it needs a look.
+
+Conclusions:
+
+1. Cheap stage as a commit (`p2c`), not a head start or late join.
+2. Add the four temporary projections (`q-*`); `q-A` is the smallest change (just two more
+   entries in `idpv1Rest`), `q-D` is nominally fastest. No evidence on `small` to separate them.
+3. Late join (`p2-t10`): not recommended.
+
+Proposed final strategy: `q-A` (or `q-D`), then validate on the full sets (`itrs-full`,
+`jbcrec-full`, `jbc-full`): at least `q-A` vs. `q-D` vs. `base-current`, and `m0-main` as
+reference on `itrs-full` for `choice.itrs`-like regressions. Not done yet; `current.strategy`
+is unchanged.
+
+## Full-set validation `d-` (desktop, 2026-10-12): `q-A`, `q-D`, `base-current`
+
+Same jar (`852e64a802`) and 30 s timeout, but `JOBS=8 CORES=4 MEM=5g` (all 32 threads, so files
+share physical cores through SMT; slower per file than the `small` batch, comparable between
+these three runs only). Inputs: `itrs-full` 117, `jbcrec-full` 143, `jbc-full` 222 (the 300 JBC
+files minus the 78 NO files of the old baseline, hence no NO there).
+
+| Set | Variant | YES | NO | MAYBE | KILLED | Time |
+|---|---|---|---|---|---|---|
+| itrs-full | `q-A` | 106 | 0 | 1 | 10 | 457 s |
+| | `q-D` | 106 | 0 | 1 | 10 | 456 s |
+| | `base-current` | 106 | 0 | 0 | 11 | 534 s |
+| jbcrec-full | `q-A` | 93 | 41 | 2 | 7 | 652 s |
+| | `q-D` | 94 | 41 | 2 | 6 | 613 s |
+| | `base-current` | 94 | 41 | 1 | 7 | 646 s |
+| jbc-full | `q-A` | 201 | 0 | 5 | 16 | 1176 s |
+| | `q-D` | 202 | 0 | 5 | 15 | 1145 s |
+| | `base-current` | 199 | 0 | 2 | 21 | 1316 s |
+
+Files with different verdicts (all others identical in all three runs):
+
+- itrs: practical3.itrs: `q-*` MAYBE after 2 s, `base-current` KILLED.
+- jbcrec: Norm.jar: YES in `q-D` (19 s) and `base-current` (16 s), KILLED in `q-A`.
+  EvenOdd.jar: `q-*` MAYBE after 2.5 s, `base-current` KILLED.
+- jbc: Distances.jar, Graph.jar: YES only in `q-D` (17 s, 24 s), KILLED in the others.
+  MinusUserDefined.jar: YES only in `q-A` (10 s). juHashMapCreateHashCode.jar: YES in `q-A`,
+  `q-D` (21-22 s), KILLED in `base-current`. Velroyen08-doubleNeg/gcd/lcm.jar: `q-*` MAYBE
+  after 2-3 s, `base-current` KILLED.
+
+Conclusions:
+
+- No YES/NO flip anywhere; the 41 NO of jbcrec-full are identical in all three runs. No
+  soundness alarm.
+- Both `q-*` are better than `base-current`: -13% time on itrs, -3..6% on jbcrec, -13% on jbc,
+  and fewer KILLED (10/6-7/15-16 vs. 11/7/21). The only file `base-current` solves and `q-*`
+  do not is none; `q-*` gain juHashMapCreateHashCode.jar (and Norm.jar for `q-D`).
+- `q-D` vs. `q-A`: `q-D` is slightly ahead (+1 jbcrec, +1 jbc, 4-6% faster), but the
+  differences are single files with 17-45 s times, i.e. at the edge of the timeout under load
+  (Norm, Distances, Graph, MinusUserDefined flip with timing). Not a real separation.
+- The 5 files where `q-*` answer MAYBE within 3 s and `base-current` runs until killed
+  (practical3, EvenOdd, Velroyen08-doubleNeg/gcd/lcm) were not solved by `base-current`
+  either at 30 s. Not checked whether `base-current` would solve them with a longer timeout.
+
+Recommendation: `q-D` for `current.strategy` (fastest, at least as many solved on every
+set). Waiting for the user's decision; `current.strategy` unchanged, nothing committed.
+
+Applied 2026-10-12: `q-D` is now `idpv1`/`idpv1Rest` in `current.strategy` (not committed). `idpv1MainLoop` is kept (no longer referenced by `idpv1`, only by itself).
+
+## Placement check `e-` (desktop, 2026-10-12): is `q-D` the right structure?
+
+Question: are the temporary projections too prominent, and are the normal projections too late
+(in `q-D` they only start after `idpFast` failed, up to 12 s in)? Full sets, same jar, 30 s,
+`JOBS=8 MEM=5g`; `q-A` and `q-D` repeated to measure run-to-run noise.
+
+- `q-E`: normal projections at once; temporary ones only in the slow group (with `idpSlow`).
+- `q-G`: normal projections at once; temporary ones join after 2 s (`AnyDelay(2000, main path, temp)`).
+
+| Set | `q-A` | `q-D` | `q-E` | `q-G` | (earlier `d-q-A` / `d-q-D`) |
+|---|---|---|---|---|---|
+| itrs-full YES/K | 106/10 | 106/10 | 106/10 | 106/10 | 106/10, 106/10 |
+| jbcrec-full YES/K (NO 41 everywhere) | 94/6 | 95/5 | 95/5 | 95/5 | 93/7, 94/6 |
+| jbc-full YES/K/M | 202/15/5 | 202/15/5 | 199/18/5 | 200/16/6 | 201/16/5, 202/15/5 |
+| jbc-full time | 1147 s | 1143 s | 1237 s | 1218 s | 1176 s, 1145 s |
+
+Findings:
+
+- Noise: itrs identical; `q-D` reproduces (jbc 202/15/5, 1143 vs. 1145 s). On jbcrec the
+  single files Norm.jar and MysteriousProgram.jar (10-20 s) flip between runs. Differences of
+  one file there are noise.
+- Later temporary projections cost: `q-E` and `q-G` lose Distances.jar and Graph.jar (YES at
+  13-24 s with `q-D`), and `q-E` also juHashMapCreateHashCode.jar; 6-8% slower on jbc-full.
+  So the temporary projections should stay early (prominent).
+- Normal projections at once (`q-A`) vs. after `idpFast` (`q-D`): same on itrs and jbc counts;
+  `q-D` solves Graph.jar in both runs where `q-A` is KILLED both times (the extra concurrent
+  normal projections take CPU), `q-A` solves MinusUserDefined.jar (10 s) which `q-D` does not
+  in any of its runs. No clear winner; `q-D` is marginally ahead. Late normal projections are
+  not a problem on these sets.
+- Not tested: dropping the normal projections entirely (the `p2c`-vs-`q-*` comparison on
+  `small` suggests the temporary ones carry the gain), and different `Time=` (10 s) values of
+  the temporary projections.
+
+`current.strategy` stays on `q-D`.
+
+## `Time=` of the temporary projections `f-` (desktop, 2026-10-12)
+
+`q-D` with `Time=` of both temporary projections changed (`q-T3`, `q-T5`, `q-T20`; reference
+`e-q-D` = 10000 ms). Full sets, same jar and settings as the `e-` batch.
+
+| Set | 3 s | 5 s | 10 s (`q-D`) | 20 s |
+|---|---|---|---|---|
+| itrs-full YES/K | 106/10 | 106/10 | 106/10 | 106/10 |
+| jbcrec-full YES/K | 95/5 | 94/6 | 95/5 | 94/6 |
+| jbc-full YES/K/M | 203/14/5 | 203/14/5 | 202/15/5 | 202/14/6 |
+| jbc-full time | 1143 s | 1184 s | 1143 s | 1157 s |
+
+Only single timing-sensitive files differ: MysteriousProgram.jar (jbcrec, 10 s; flips between
+identical runs), MinusUserDefined.jar (jbc; YES at 13/29 s with 3/5 s, KILLED with 10/20 s, but it
+also flipped between the two `q-A` runs and the two `q-D` runs before) and MultiLasso.jar (MAYBE
+once at 20 s). No evidence for a better value than 10000; 3000 is not worse. Keep `Time=10000`.
+
+## 60 s run of the final strategy `g-` (desktop, 2026-10-12)
+
+`final` (= `q-D` = new `current.strategy`), 60 s timeout, `JOBS=4 CORES=4 MEM=12g`, jar
+`852e64a802`. (A first try with no `-Xmx` was stopped after 40 s: 8 JVMs grew to 9-11 GB RSS
+each, free memory < 1 GB and 20 GB swap; `MEM=none` is therefore not usable with many files in
+parallel, see the README.) Different job count and heap than the 30 s runs, so only verdicts are
+compared, with `e-q-D` (30 s).
+
+| Set | YES | NO | MAYBE | KILLED | 30 s `e-q-D` YES/K |
+|---|---|---|---|---|---|
+| itrs-full | 106 | 0 | 1 | 10 | 106/10 |
+| jbcrec-full | 95 | 41 | 4 | 3 | 95/5 |
+| jbc-full | 204 | 0 | 6 | 12 | 202/15 |
+
+Changed files: jbc: MinusUserDefined.jar KILLED -> YES (17 s), juHashMapCreateEquals.jar
+KILLED -> YES (32 s), juHashMapCreatePutAll.jar KILLED -> MAYBE (39 s); jbcrec: Domino.jar and
+Nim.jar KILLED -> MAYBE (40/45 s). itrs unchanged: the 10 KILLED files (a.02, A15, choice,
+collatz, Ex04, f91, A16, countUpNo, ...) do not finish within 60 s either. No verdict flips.
+Doubling timeout and heap gains two files, so the remaining KILLED files are hard, not resource
+problems.
+
+## Status and next steps (2026-10-12, night)
+
+**Done:** the strategy series is finished. The structure `q-D` is in `current.strategy` (commit
+`current.strategy: Try cheap stage first in idpv1` on branch `idpv1-strategy`, directly on top of
+upstream `7948abc`; the local commits `CLAUDE.md`, bench configs and this workspace are above it
+as before). Summary of the evidence (all above in this file):
+
+1. Cheap stage (`IDPtoQDP[Apply=CONSTONLY]`, `IDPtoIRS[Apply=INTONLY]`) as a commit (`First`):
+   +8 files and -30% time vs. the `aprove/main` `idpv1` (`m0-main`) on `small`. A 5 s head start
+   or a late join (`p2`, `p2-t10`) does not pay off.
+2. Temporary projections early (in the same `Any` as `idpFast`/`idpSlow`): +3 files on `small`
+   (PartitionList, juHashMapCreateIteratorKeyLoop, juHashMapCreateHashCode); moving them later
+   (`q-E`, `q-G`) loses Distances.jar, Graph.jar and is 6-8% slower on jbc-full.
+3. Normal projections at once (`q-A`) or after `idpFast` (`q-D`): no real difference; `q-D`
+   chosen (marginally ahead, fastest). `Time=` of the temporary projections 3/5/10/20 s: no
+   difference, kept 10000.
+4. Full sets, 30 s: new strategy vs. old `idpv1`: itrs 106/106 YES but -15% time; jbcrec 95 vs.
+   94 YES (41 NO both); jbc 202 vs. 199 YES, 15 vs. 21 KILLED, -13% time. No YES/NO flips.
+
+**Branch and what to push:** `idpv1-strategy` (created from a detached HEAD). `git log
+--oneline` should show, top to bottom: the commits with the results/docs of this session, the
+workspace commit, bench configs, `CLAUDE.md`, `current.strategy: Try cheap stage first in
+idpv1`, then upstream. Only the strategy commit is meant for upstream (PR); the commits above it
+are local convenience. Push the branch, then on the notebook `git fetch && git checkout
+idpv1-strategy`. The jars, `runs/*/out/` and `runs/*.log` are not in git (only `results.csv` and
+`variant.txt` of every run are).
+
+**Open (none blocks the strategy):**
+
+- `choice.itrs` is proved by `m0-main` (25 s) but KILLED by every variant of the new family and
+  by the old `current` (not looked at why; first check which technique proves it in `m0-main`).
+- Velroyen08-moduloLower.jar: `JBCNonTerm` gives NO in 9 ms with the old strategy, the new one
+  answers MAYBE after 1.7 s (the cheap path ends before `JBCNonTerm` delivers?). Also
+  practical3.itrs, EvenOdd.jar, Velroyen08-doubleNeg/gcd/lcm.jar now give MAYBE after 2-3 s where
+  the old strategy ran into the timeout; unknown whether the old one would solve them with more
+  time.
+- `idpv1MainLoop` is no longer used by `idpv1`; remove it (or keep for the old variants in
+  `variants.sh`, which reference it).
+- Follow-up for `ConstraintComparator` (it ignores the kind of a `Predicate` and compares function
+  symbols by hash code; see the section above) and the ITRS regression with `idpSlow` only.
+- Not tested: dropping the normal projections entirely.
+- The JBC full-set validation is now done (jbc-full, 222 files without the 78 NO files, runs
+  `d-`, `e-`, `f-`, `g-`); the JBC NO files were not re-run with the new strategy except
+  jbcrec-full (41 NO unchanged).
+- Prerequisite for any further comparison: only runs of the same machine, jar and settings; use
+  `old-current` and `final` as references (the variant `base-current` now equals `final`).
