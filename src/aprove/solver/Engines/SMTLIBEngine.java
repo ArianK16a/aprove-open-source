@@ -78,6 +78,10 @@ public class SMTLIBEngine extends SMTEngine {
         }
         // Retrieve old names for the variables and functions
         final Pair<YNM, Map<String, String>> resultPair = this.solve(vis.getResult(), logic, aborter);
+        if (resultPair == null) {
+            // the solver could not be run, e.g. since AProVE is being shut down
+            return new Pair<YNM, Map<String, String>>(YNM.MAYBE, new LinkedHashMap<String, String>());
+        }
 
         resultPair.y = SMTEngine.translateResultMapToOldNames(resultPair.y, vis.getVarNameMap());
 
