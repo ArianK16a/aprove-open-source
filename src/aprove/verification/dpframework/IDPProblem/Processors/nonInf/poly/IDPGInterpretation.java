@@ -320,6 +320,7 @@ public class IDPGInterpretation extends GInterpretation<BigIntImmutable> {
                     }
                     break;
                 case Eq:
+                case Neq:
                     switch (argNr) {
                     case 0:
                         return RelDependency.Wild;
@@ -857,6 +858,8 @@ public class IDPGInterpretation extends GInterpretation<BigIntImmutable> {
                         return this.getPolyLt(symbol);
                     case Eq:
                         return this.getPolyEq(symbol);
+                    case Neq:
+                        return this.getPolyNeq(symbol);
                     case Land:
                         return this.getPolyLand(symbol);
                     case Lor:
@@ -1213,6 +1216,10 @@ public class IDPGInterpretation extends GInterpretation<BigIntImmutable> {
     }
 
     private OrderPoly<BigIntImmutable> getPolyEq(final FunctionSymbol symbol) {
+        return this.getNextCoeffOrderPoly(symbol);
+    }
+
+    private OrderPoly<BigIntImmutable> getPolyNeq(final FunctionSymbol symbol) {
         return this.getNextCoeffOrderPoly(symbol);
     }
 
