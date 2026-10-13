@@ -34,6 +34,7 @@ public enum Language {
     CpxITrs(HandlingMode.RuntimeComplexity),
     CpxIntTrs(HandlingMode.RuntimeComplexity),
     JBC,
+    LCTRS, // logically constrained TRS in the ARI format
     MCS, // Monotonicity Constraint Transition System of MCNP fame
     LLVM,
     OTRS,
