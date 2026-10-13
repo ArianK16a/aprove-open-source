@@ -280,7 +280,7 @@
 
 	<!-- ===================================== grammars -->
 
-	<target name="generateGrammars" depends="diophantine,diologic,fp,haskell,fppp,idp,ipad,pl,polynomial,prolog,srs,srs2,simplify,acl,term,tes,ttt,xsrs,cls,strs,patrs,newTrs,newPtrs,ariTrs,Strategy,smtBenchmark,newIDP,llvm,intprog,T2IntSys,IntTRS,impact,InterprocInvariant" />
+	<target name="generateGrammars" depends="diophantine,diologic,fp,haskell,fppp,idp,ipad,pl,polynomial,prolog,srs,srs2,simplify,acl,term,tes,ttt,xsrs,cls,strs,patrs,newTrs,newPtrs,ariTrs,ariLctrs,Strategy,smtBenchmark,newIDP,llvm,intprog,T2IntSys,IntTRS,impact,InterprocInvariant" />
 
 	<property name="inputmodules" value="${package}/input" />
 	<property name="grammars.src" value="${src}/${inputmodules}/Grammars" />
@@ -364,6 +364,9 @@
 	</target>
 	<target name="ariTrs_uptodate">
 		<uptodate property="ariTrsuptodate.grammars" srcfile="${grammars.src}/ariTrs.g" targetfile="${grammars.gen}/ariTrs/ariTrs.tokens" />
+	</target>
+	<target name="ariLctrs_uptodate">
+		<uptodate property="ariLctrsuptodate.grammars" srcfile="${grammars.src}/ariLctrs.g" targetfile="${grammars.gen}/ariLctrs/ariLctrs.tokens" />
 	</target>
 	<target name="llvm_uptodate">
 		<uptodate property="llvmuptodate.grammars" srcfile="${grammars.src}/LLVM.g" targetfile="${grammars.gen}/llvm/LLVM.tokens" />
@@ -628,6 +631,19 @@
 		</java>
 		<available file="${grammars.gen}/ariTrs/ariTrs.tokens" property="ariTrs_ok" />
 		<fail message="ERROR in building the ariTrs parser!" unless="ariTrs_ok" />
+	</target>
+	<target name="ariLctrs" depends="ariLctrs_uptodate" unless="ariLctrsuptodate.grammars">
+		<delete dir="${grammars.gen}/ariLctrs" />
+		<mkdir dir="${grammars.gen}/ariLctrs" />
+		<java jar="${antlr}" failonerror="true" fork="true">
+			<arg value="-fo" />
+			<arg value="${grammars.gen}/ariLctrs" />
+			<arg value="-make" />
+			<arg value="-verbose" />
+			<arg value="${grammars.src}/ariLctrs.g" />
+		</java>
+		<available file="${grammars.gen}/ariLctrs/ariLctrs.tokens" property="ariLctrs_ok" />
+		<fail message="ERROR in building the ariLctrs parser!" unless="ariLctrs_ok" />
 	</target>
 	<target name="newIDP" depends="newIDP_uptodate" unless="newIDPuptodate.grammars">
 		<delete dir="${grammars.gen}/newIDP" />

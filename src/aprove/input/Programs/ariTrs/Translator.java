@@ -36,6 +36,19 @@ public class Translator extends TranslatorSkeleton {
     @Override
     public void translate(Reader reader) {
         try {
+            // LCTRSs have their own parser; the format is declared first, only comments may precede it
+            final String text = Translator.readAll(reader);
+            if (Translator.LCTRS_FORMAT.matcher(text).lookingAt()) {
+                final aprove.input.Programs.ariLctrs.Translator lctrs = new aprove.input.Programs.ariLctrs.Translator();
+                lctrs.translate(new StringReader(text));
+                for (final ParseError pe : lctrs.getErrors()) {
+                    this.getErrors().add(pe);
+                }
+                this.setState(lctrs.getState());
+                this.language = lctrs.getLanguage();
+                return;
+            }
+            reader = new StringReader(text);
         	ariTrsLexer lex = new ariTrsLexer(new ANTLRReaderStream(reader));
             CommonTokenStream tokens = new CommonTokenStream(lex);
             ariTrsParser parser = new ariTrsParser(tokens);
@@ -57,6 +70,22 @@ public class Translator extends TranslatorSkeleton {
         } catch (ObligationCreatorException e) {
             this.getErrors().addAll(e.getParseErrors());
         }
+    }
+
+    /**
+     * Matches the beginning of an input that declares the format LCTRS.
+     */
+    private static final java.util.regex.Pattern LCTRS_FORMAT =
+        java.util.regex.Pattern.compile("(\\s|;[^\\n]*)*\\(\\s*format\\s+LCTRS[\\s:)]");
+
+    private static String readAll(final Reader reader) throws IOException {
+        final StringBuilder res = new StringBuilder();
+        final char[] buffer = new char[8192];
+        int n;
+        while ((n = reader.read(buffer)) != -1) {
+            res.append(buffer, 0, n);
+        }
+        return res.toString();
     }
 
     private void applyCliOverrides(final RawAriTrs rawptrs) {

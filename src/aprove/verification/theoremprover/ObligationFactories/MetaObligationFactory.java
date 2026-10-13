@@ -19,6 +19,7 @@ import aprove.verification.dpframework.DPProblem.*;
 import aprove.verification.dpframework.HaskellProblem.*;
 import aprove.verification.dpframework.IDPProblem.*;
 import aprove.verification.dpframework.JBCProblem.*;
+import aprove.verification.dpframework.LCTRSProblem.*;
 import aprove.verification.dpframework.MCSProblem.*;
 import aprove.verification.dpframework.PATRSProblem.*;
 import aprove.verification.dpframework.TRSProblem.*;
@@ -227,6 +228,8 @@ public class MetaObligationFactory implements ObligationFactory {
             return (T2IntSys)input;
         case INTTRS:
             return (IRSwTProblem)input;
+        case LCTRS:
+            return (LCTRSProblem)input;
         case C:
             return (CProblem)input;
         case PTRS:
