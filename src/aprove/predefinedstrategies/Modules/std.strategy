@@ -1094,6 +1094,7 @@ declare IDPRemoveTerm = aprove.verification.dpframework.IDPProblem.Processors.ID
 
 declare ITRSConstantFolding = aprove.verification.dpframework.IDPProblem.Processors.ITRSConstantFoldingProcessor
 declare ITRSToIDP = aprove.verification.dpframework.IDPProblem.Processors.ITRStoIDPProcessor
+declare LCTRSToITRS = aprove.verification.dpframework.LCTRSProblem.Processors.LCTRSToITRSProcessor
 declare ITRSToIDPV2 = aprove.verification.dpframework.IDPProblem.Processors.ITRStoIDPV2Processor
 declare ITRStoQTRS = aprove.verification.dpframework.IDPProblem.Processors.ITRStoQTRSProcessor
 declare ITRSDuplicateArgsRemover = aprove.verification.dpframework.IDPProblem.Processors.JBCPreprocessing.DuplicateArgsRemover
