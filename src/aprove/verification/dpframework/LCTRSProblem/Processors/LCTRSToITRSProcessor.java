@@ -109,11 +109,11 @@ public class LCTRSToITRSProcessor extends Processor.ProcessorSkeleton {
     /**
      * Thrown for a theory symbol that has no counterpart in ITRSs.
      */
-    private static class UnsupportedSymbolException extends Exception {
+    static class UnsupportedSymbolException extends Exception {
 
         private static final long serialVersionUID = 1L;
 
-        private UnsupportedSymbolException(final FunctionSymbol f) {
+        UnsupportedSymbolException(final FunctionSymbol f) {
             super("The theory symbol " + f.getName() + " with " + f.getArity() + " arguments is not supported.");
         }
 
@@ -122,7 +122,7 @@ public class LCTRSToITRSProcessor extends Processor.ProcessorSkeleton {
     /**
      * Converts the terms and rules of one LCTRS and collects the pre-defined symbols that are used.
      */
-    private static class Converter {
+    static class Converter {
 
         /** The theory symbols with a direct counterpart on the Booleans, by <code>name/arity</code>. */
         private static final Map<String, Func> BOOLEAN =
@@ -137,13 +137,17 @@ public class LCTRSToITRSProcessor extends Processor.ProcessorSkeleton {
         private final LCTRSSignature signature;
 
         /** The pre-defined function symbols that occur in the converted terms, with their semantics. */
-        private final Map<FunctionSymbol, PredefinedFunction<? extends Domain>> predefined = new LinkedHashMap<>();
+        final Map<FunctionSymbol, PredefinedFunction<? extends Domain>> predefined = new LinkedHashMap<>();
 
         /** The term symbols that are renamed since their name is used by a pre-defined symbol. */
         private final Map<FunctionSymbol, FunctionSymbol> renaming = new LinkedHashMap<>();
 
-        private Converter(final LCTRSProblem lctrs) {
-            this.signature = lctrs.getSignature();
+        Converter(final LCTRSProblem lctrs) {
+            this(lctrs.getSignature());
+        }
+
+        Converter(final LCTRSSignature signature) {
+            this.signature = signature;
             final Set<String> reserved = new LinkedHashSet<>();
             reserved.add(PredefinedSemanticsFactory.BOOLEAN_FS_TRUE.getName());
             reserved.add(PredefinedSemanticsFactory.BOOLEAN_FS_FALSE.getName());
@@ -162,14 +166,14 @@ public class LCTRSToITRSProcessor extends Processor.ProcessorSkeleton {
             }
         }
 
-        private IGeneralizedRule convert(final LCTRSRule rule) throws UnsupportedSymbolException {
+        IGeneralizedRule convert(final LCTRSRule rule) throws UnsupportedSymbolException {
             return IGeneralizedRule.create(
                 (TRSFunctionApplication) this.convert(rule.left()),
                 this.convert(rule.right()),
                 rule.hasGuard() ? this.convert(rule.guard()) : null);
         }
 
-        private TRSTerm convert(final TRSTerm term) throws UnsupportedSymbolException {
+        TRSTerm convert(final TRSTerm term) throws UnsupportedSymbolException {
             if (term.isVariable()) {
                 return term;
             }
@@ -241,14 +245,14 @@ public class LCTRSToITRSProcessor extends Processor.ProcessorSkeleton {
                 this.bool(Func.Land, this.bool(Func.Lnot, a), this.bool(Func.Lnot, b)));
         }
 
-        private TRSTerm bool(final Func func, final TRSTerm... args) {
+        TRSTerm bool(final Func func, final TRSTerm... args) {
             return this.apply(func, DomainFactory.BOOLEAN, args);
         }
 
         /**
          * @return the application of the pre-defined function on the given domain to the arguments
          */
-        private TRSTerm apply(final Func func, final Domain domain, final TRSTerm... args) {
+        TRSTerm apply(final Func func, final Domain domain, final TRSTerm... args) {
             final FunctionSymbol f = FunctionSymbol.create(func.getName(), func.getArity());
             this.predefined.computeIfAbsent(
                 f,
