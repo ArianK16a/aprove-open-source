@@ -1094,6 +1094,7 @@ declare ITRSConstantFolding = aprove.verification.dpframework.IDPProblem.Process
 declare ITRSToIDP = aprove.verification.dpframework.IDPProblem.Processors.ITRStoIDPProcessor
 declare LCTRSToITRS = aprove.verification.dpframework.LCTRSProblem.Processors.LCTRSToITRSProcessor
 declare LCTRSDPToQDP = aprove.verification.dpframework.LCTRSProblem.Processors.LCTRSDPToQDPProcessor
+declare LCTRSDPToIRS = aprove.verification.dpframework.LCTRSProblem.Processors.LCTRSDPToIRSProcessor
 declare LCTRSSortProjection = aprove.verification.dpframework.LCTRSProblem.Processors.LCTRSSortProjectionProcessor
 declare LCTRSDependencyGraph = aprove.verification.dpframework.LCTRSProblem.Processors.LCTRSDependencyGraphProcessor
 declare LCTRSDependencyPairs = aprove.verification.dpframework.LCTRSProblem.Processors.LCTRSDependencyPairsProcessor
