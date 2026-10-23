@@ -1093,6 +1093,7 @@ declare IDPMCNP = aprove.verification.dpframework.IDPProblem.Processors.IDPMCNPP
 declare ITRSConstantFolding = aprove.verification.dpframework.IDPProblem.Processors.ITRSConstantFoldingProcessor
 declare ITRSToIDP = aprove.verification.dpframework.IDPProblem.Processors.ITRStoIDPProcessor
 declare LCTRSToITRS = aprove.verification.dpframework.LCTRSProblem.Processors.LCTRSToITRSProcessor
+declare LCTRSDependencyGraph = aprove.verification.dpframework.LCTRSProblem.Processors.LCTRSDependencyGraphProcessor
 declare LCTRSDependencyPairs = aprove.verification.dpframework.LCTRSProblem.Processors.LCTRSDependencyPairsProcessor
 declare ITRSToIDPV2 = aprove.verification.dpframework.IDPProblem.Processors.ITRStoIDPV2Processor
 declare ITRStoQTRS = aprove.verification.dpframework.IDPProblem.Processors.ITRStoQTRSProcessor
