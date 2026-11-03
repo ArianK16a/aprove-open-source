@@ -31,8 +31,22 @@ import immutables.*;
  *
  * <p>Unless only arguments of tuple symbols are removed, the QDP is analysed
  * for full termination and it is not minimal.</p>
+ *
+ * <p>With <code>TempFilter</code>, the QDP is only used to remove nodes from
+ * the IDP, see {@link IDPTemporaryFilter}.</p>
  */
 public class IDPRemoveIntProcessor extends IDPProcessor {
+
+    private final boolean tempFilter;
+    private final UserStrategy strategy;
+    private final int time;
+
+    @ParamsViaArgumentObject
+    public IDPRemoveIntProcessor(final Arguments arguments) {
+        this.tempFilter = arguments.tempFilter;
+        this.strategy = arguments.strategy;
+        this.time = arguments.time;
+    }
 
     /**
      * Applicable to every IDP, as restricted integers and bitwise operations
@@ -45,6 +59,13 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
 
     @Override
     protected Result processIDPProblem(final IDPProblem iDP, final Abortion aborter) {
+        // Not used, as process passes the runtime information
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected Result processIDPProblem(final IDPProblem iDP, final Abortion aborter, final RuntimeInformation rti)
+            throws AbortionException {
         final IDPProjection projection = IDPProjection.removeIntsAndBools(iDP);
         if (projection == null) {
             return ResultFactory.unsuccessful("The IDP is not well-typed.");
@@ -53,17 +74,21 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
             // The QDP would be the same as the one of IDPtoQDP
             return ResultFactory.unsuccessful("There are no integer or boolean arguments.");
         }
-        final QDPProblem qDP = IDPRemoveIntProcessor.toQDP(iDP, projection);
-        if (qDP == null) {
+        final IDPConversion<Rule> conversion = IDPRemoveIntProcessor.toQDP(iDP, projection);
+        if (conversion == null) {
             return ResultFactory.unsuccessful("A free variable remains after the removal.");
         }
-        return ResultFactory.proved(qDP, YNMImplication.SOUND, new IDPRemoveIntProof(projection));
+        if (!this.tempFilter) {
+            return ResultFactory.proved(conversion.getTarget(), YNMImplication.SOUND, conversion.getProof());
+        }
+        return IDPTemporaryFilter.run(iDP, conversion, this.strategy, this.time, aborter, rti, this);
     }
 
     /**
-     * @return the QDP, or <code>null</code> if a rule has a free variable
+     * @return the QDP together with the mapping back to the IDP nodes, or
+     *         <code>null</code> if a rule has a free variable
      */
-    private static QDPProblem toQDP(final IDPProblem iDP, final IDPProjection projection) {
+    private static IDPConversion<Rule> toQDP(final IDPProblem iDP, final IDPProjection projection) {
         final Set<Rule> rules = new LinkedHashSet<Rule>();
         for (final GeneralizedRule rule : projection.getRules()) {
             if (!rule.getLeft().getVariables().containsAll(rule.getRight().getVariables())) {
@@ -73,6 +98,7 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
         }
 
         // The pairs keep the edges of the IDP graph
+        final CollectionMap<Rule, Node> inverseNodes = new CollectionMap<>();
         final Graph<Rule, ?> graph = new Graph<Rule, Void>();
         final IIDependencyGraph idpGraph = iDP.getIdpGraph();
         final Map<Node, aprove.verification.oldframework.Utility.Graph.Node<Rule>> graphNodes = new LinkedHashMap<>();
@@ -86,6 +112,7 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
                 new aprove.verification.oldframework.Utility.Graph.Node<Rule>(rule);
             graphNodes.put(entry.getKey(), graphNode);
             graph.addNode(graphNode);
+            inverseNodes.add(rule, entry.getKey());
         }
         for (final Node node : idpGraph.getNodes()) {
             for (final Node succ : idpGraph.getSuccessors(node).keySet()) {
@@ -95,9 +122,15 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
 
         final Set<TRSFunctionApplication> qTerms = projection.isInnermost()
             ? iDP.getQ().getExplicitTerms() : new LinkedHashSet<TRSFunctionApplication>();
-        return QDPProblem.create(graph,
+        final QDPProblem qDP = QDPProblem.create(graph,
                 QTRSProblem.create(ImmutableCreator.create(rules), qTerms),
                 iDP.isMinimal() && projection.isInnermost());
+        if (qDP == null) {
+            return null;
+        }
+        return new IDPConversion<>(qDP, inverseNodes,
+                obl -> obl instanceof QDPProblem ? ((QDPProblem) obl).getP() : null,
+                new IDPRemoveIntProof(projection));
     }
 
     public static class IDPRemoveIntProof extends DefaultProof {
@@ -115,6 +148,33 @@ public class IDPRemoveIntProcessor extends IDPProcessor {
                 result.append("the QDP is analysed for full termination.");
             }
             return result.toString();
+        }
+    }
+
+    public static class Arguments {
+        /**
+         * Whether the QDP is only used to remove nodes from the IDP. If true,
+         * `strategy` is executed on the QDP and the nodes whose pairs it
+         * removed are removed from the IDP. If false, the QDP is returned.
+         */
+        boolean tempFilter = false;
+
+        /** Strategy to execute on the QDP if `tempFilter` is set. */
+        UserStrategy strategy;
+
+        /** Time limit for `strategy`. */
+        int time = 42042;
+
+        public void setTempFilter(final boolean tempFilter) {
+            this.tempFilter = tempFilter;
+        }
+
+        public void setStrategy(final String strategyName) {
+            this.strategy = new VariableStrategy(strategyName);
+        }
+
+        public void setTime(final int timeVal) {
+            this.time = timeVal;
         }
     }
 }
