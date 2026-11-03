@@ -94,6 +94,45 @@ public final class HelperClass {
     }
 
     /**
+     * Checks whether only arguments of tuple symbols are removed, i.e. of
+     * symbols that do not occur in R, in Q or in the kept arguments of the
+     * pairs. Then the kept arguments of the pairs, R and Q stay the same, so
+     * the normal forms and the terminating terms do not change. Otherwise, a
+     * left-hand side may match more terms after the removal.
+     *
+     * @param removePositions the positions to remove, or <code>null</code>
+     */
+    public static boolean removesOnlyTupleArguments(final CollectionMap<FunctionSymbol, Integer> removePositions,
+            final Collection<? extends GeneralizedRule> pairs, final Collection<? extends GeneralizedRule> rules,
+            final Collection<TRSFunctionApplication> qTerms) {
+        if (removePositions == null || removePositions.isEmpty()) {
+            return true;
+        }
+        final Set<FunctionSymbol> nonTupleSymbols = new LinkedHashSet<FunctionSymbol>();
+        nonTupleSymbols.addAll(CollectionUtils.getFunctionSymbols(rules));
+        nonTupleSymbols.addAll(CollectionUtils.getFunctionSymbols(qTerms));
+        for (final GeneralizedRule pair : pairs) {
+            for (final TRSTerm side : Arrays.asList(pair.getLeft(), pair.getRight())) {
+                if (side instanceof TRSFunctionApplication) {
+                    final TRSFunctionApplication fa = (TRSFunctionApplication) side;
+                    final Collection<Integer> remove = removePositions.getNotNull(fa.getRootSymbol());
+                    for (int i = 0; i < fa.getArguments().size(); i++) {
+                        if (!remove.contains(i)) {
+                            nonTupleSymbols.addAll(fa.getArgument(i).getFunctionSymbols());
+                        }
+                    }
+                }
+            }
+        }
+        for (final Map.Entry<FunctionSymbol, Collection<Integer>> entry : removePositions.entrySet()) {
+            if (!entry.getValue().isEmpty() && nonTupleSymbols.contains(entry.getKey())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Remove the given arguments of all terms, construct a new ITRS and return
      * it. In addition, information about renamed symbols is returned.
      * @param itrs the itrs
