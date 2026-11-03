@@ -96,6 +96,27 @@ public final class IDPTypeFilter {
         return positions;
     }
 
+    /**
+     * @return the argument positions whose type is neither integer nor
+     *         boolean, or <code>null</code> if the rules are not well-typed
+     */
+    public static CollectionMap<FunctionSymbol, Integer> getOtherPositions(
+            final Set<? extends GeneralizedRule> rules, final IDPPredefinedMap predefinedMap) {
+        final CollectionMap<FunctionSymbol, Integer> intOrBool = IDPTypeFilter.getIntOrBoolPositions(rules, predefinedMap, false);
+        if (intOrBool == null) {
+            return null;
+        }
+        final CollectionMap<FunctionSymbol, Integer> positions = new CollectionMap<FunctionSymbol, Integer>();
+        for (final FunctionSymbol sym : CollectionUtils.getFunctionSymbols(rules)) {
+            for (int i = 0; i < sym.getArity(); i++) {
+                if (!intOrBool.contains(sym, i)) {
+                    positions.add(sym, i);
+                }
+            }
+        }
+        return positions;
+    }
+
     private static void addType(final Domain domain, final Type type, final Set<Type> intTypes,
             final Set<Type> boolTypes) {
         if (domain instanceof IntegerDomain) {
