@@ -52,6 +52,18 @@ public final class IDPProjection {
                 "their type is integer or boolean");
     }
 
+    /**
+     * Removes all arguments that are neither integer nor boolean.
+     *
+     * @return the projection, or <code>null</code> if the IDP is not
+     *         well-typed
+     */
+    public static IDPProjection removeOthers(final IDPProblem iDP) {
+        return IDPProjection.create(iDP,
+                IDPTypeFilter.getOtherPositions(IDPProjection.allRules(iDP), IDPProjection.predefinedMap(iDP)),
+                "their type is neither integer nor boolean");
+    }
+
     private static IDPProjection create(final IDPProblem iDP, final CollectionMap<FunctionSymbol, Integer> removed,
             final String reason) {
         if (removed == null) {
