@@ -1015,7 +1015,7 @@ idpv1 = First(
                Solve(
                  Timer(12000, idpFast)
                ),
-               AnyDelay(5000,
+               Any(
                  Solve(idpSlow),
                  Solve(IDPtoQDP[Apply = ALWAYSFILTER]:RunDefaultStrategyForObligation)
                )
