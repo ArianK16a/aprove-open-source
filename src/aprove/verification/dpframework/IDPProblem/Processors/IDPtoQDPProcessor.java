@@ -144,7 +144,16 @@ public class IDPtoQDPProcessor extends IDPProcessor {
         final ImmutableSet<GeneralizedRule> idpPRules = iDP.getP();
         final ImmutableSet<GeneralizedRule> idpRRules = iDP.getR();
         final IDPPredefinedMap predefinedMap = iDP.getRuleAnalysis().getPreDefinedMap();
-        final boolean iDPisMinimal = iDP.isMinimal();
+
+        // Removing an argument of a symbol below the root of the pairs may
+        // turn a normal form into a redex and a terminating term into a
+        // non-terminating one. Then the QDP is analysed for full termination
+        // (Q is empty) and it is not minimal. Every step of the IDP is still
+        // possible or removed, so an infinite innermost chain of the IDP
+        // still yields an infinite chain of the QDP.
+        final boolean innermost =
+            HelperClass.removesOnlyTupleArguments(freeVarFilter, idpPRules, idpRRules, explicitOrigQTerms);
+        final boolean iDPisMinimal = iDP.isMinimal() && innermost;
 
         final CollectionMap<FunctionSymbol, Integer> filter =
             freeVarFilter == null ? new CollectionMap<FunctionSymbol, Integer>() : freeVarFilter;
@@ -183,13 +192,17 @@ public class IDPtoQDPProcessor extends IDPProcessor {
         if (qdpGraph == null) {
             return null;
         }
-        final Set<TRSFunctionApplication> qTerms = this.createQdpQTerms(explicitOrigQTerms, npMan, predefinedMap, freshNameMap, takenSymbols, filter);
+        final Set<TRSFunctionApplication> qTerms = innermost
+            ? this.createQdpQTerms(explicitOrigQTerms, npMan, predefinedMap, freshNameMap, takenSymbols, filter)
+            : new LinkedHashSet<TRSFunctionApplication>();
 
         // The generated rules do not add new PAIRS, but we need to add the
         // rules generated for the PAIRS to the RULES section too.
         final Set<Rule> rulesForPredefs = npMan.getGeneratedRules();
         rules.addAll(rulesForPredefs);
-        qTerms.addAll(CollectionUtils.getLeftHandSides(rulesForPredefs));
+        if (innermost) {
+            qTerms.addAll(CollectionUtils.getLeftHandSides(rulesForPredefs));
+        }
 
         return QDPProblem.create(qdpGraph,
                 QTRSProblem.create(ImmutableCreator.create(rules), qTerms),
