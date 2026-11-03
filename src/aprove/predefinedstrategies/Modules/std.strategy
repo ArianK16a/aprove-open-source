@@ -1091,6 +1091,7 @@ declare IDPMCNP = aprove.verification.dpframework.IDPProblem.Processors.IDPMCNPP
 
 declare IDPRemoveInt = aprove.verification.dpframework.IDPProblem.Processors.IDPRemoveIntProcessor
 declare IDPRemoveTerm = aprove.verification.dpframework.IDPProblem.Processors.IDPRemoveTermProcessor
+declare IDPCopyNestedInts = aprove.verification.dpframework.IDPProblem.Processors.IDPCopyNestedIntsProcessor
 
 declare ITRSConstantFolding = aprove.verification.dpframework.IDPProblem.Processors.ITRSConstantFoldingProcessor
 declare ITRSToIDP = aprove.verification.dpframework.IDPProblem.Processors.ITRStoIDPProcessor
