@@ -27,6 +27,16 @@ public abstract class IDPProcessor extends Processor.ProcessorSkeleton {
      */
     protected abstract Result processIDPProblem(IDPProblem idp, Abortion aborter) throws AbortionException;
 
+    /**
+     * Like {@link #processIDPProblem(IDPProblem, Abortion)}, for processors
+     * that need the runtime information, e.g. to run a strategy on a
+     * converted problem.
+     */
+    protected Result processIDPProblem(IDPProblem idp, Abortion aborter, RuntimeInformation rti)
+            throws AbortionException {
+        return this.processIDPProblem(idp, aborter);
+    }
+
 
     @Override
     public Result process(BasicObligation o, BasicObligationNode oblNode, Abortion aborter, RuntimeInformation rti) throws AbortionException {
@@ -36,7 +46,7 @@ public abstract class IDPProcessor extends Processor.ProcessorSkeleton {
         }
         // FIXME: We will probably have some simple abortion cases here
         // (cached, ...) cf. QDPProblemProcessor
-        return this.processIDPProblem(problem, aborter);
+        return this.processIDPProblem(problem, aborter, rti);
     }
 
     @Override
