@@ -106,11 +106,17 @@ public class IDPtoQDPProcessor extends IDPProcessor {
     protected Result processIDPProblem(final IDPProblem iDP, final Abortion aborter)
             throws AbortionException {
         try {
-            final QDPProblem qDP = this.IDPtoQDP(iDP);
+            CollectionMap<FunctionSymbol, Integer> filter = null;
+            if (this.apply == ToTermApplicability.ALWAYSFILTER) {
+                filter = FreeVariableTermRemover.getPositionFilter(
+                        iDP.getP(), iDP.getR(), iDP.getRuleAnalysis().getPreDefinedMap(), true, true,
+                        Integer.MAX_VALUE);
+            }
+            final QDPProblem qDP = this.IDPtoQDP(iDP, filter);
             if (qDP == null) {
                 return ResultFactory.unsuccessful();
             }
-            final IDPtoQDPProof proof = new IDPtoQDPProof(qDP);
+            final IDPtoQDPProof proof = new IDPtoQDPProof(qDP, filter);
             return ResultFactory.proved(qDP, YNMImplication.SOUND, proof);
         } catch (final IntOutOfRangeException e) {
             final String message = "Transformation failed, because some integers" +
@@ -122,7 +128,11 @@ public class IDPtoQDPProcessor extends IDPProcessor {
         }
     }
 
-    private QDPProblem IDPtoQDP(final IDPProblem iDP)
+    /**
+     * @param freeVarFilter the positions to remove because they contain free
+     *        variables, or <code>null</code>
+     */
+    private QDPProblem IDPtoQDP(final IDPProblem iDP, final CollectionMap<FunctionSymbol, Integer> freeVarFilter)
             throws IntOutOfRangeException {
         // Use linked sets here just for user-friendliness. We want the
         // transformed "real" rules first and the generated rules last.
@@ -136,15 +146,8 @@ public class IDPtoQDPProcessor extends IDPProcessor {
         final IDPPredefinedMap predefinedMap = iDP.getRuleAnalysis().getPreDefinedMap();
         final boolean iDPisMinimal = iDP.isMinimal();
 
-        CollectionMap<FunctionSymbol, Integer> filter = null;
-        if (this.apply == ToTermApplicability.ALWAYSFILTER) {
-            filter = FreeVariableTermRemover.getPositionFilter(
-                    idpPRules, idpRRules, predefinedMap, true, true,
-                    Integer.MAX_VALUE);
-        }
-        if (filter == null) {
-            filter = new CollectionMap<FunctionSymbol, Integer>();
-        }
+        final CollectionMap<FunctionSymbol, Integer> filter =
+            freeVarFilter == null ? new CollectionMap<FunctionSymbol, Integer>() : freeVarFilter;
 
         // beware of name clashes
         final Set<HasFunctionSymbols> forbiddenSymbols = new LinkedHashSet<HasFunctionSymbols>();
@@ -272,14 +275,33 @@ public class IDPtoQDPProcessor extends IDPProcessor {
 
         private final QDPProblem qdp;
 
-        public IDPtoQDPProof(final QDPProblem qdp) {
+        /**
+         * Positions removed because they contain free variables, or
+         * <code>null</code> if there are none.
+         */
+        private final CollectionMap<FunctionSymbol, Integer> freeVarFilter;
+
+        public IDPtoQDPProof(final QDPProblem qdp, final CollectionMap<FunctionSymbol, Integer> freeVarFilter) {
             this.qdp = qdp;
+            this.freeVarFilter = freeVarFilter;
         }
 
         @Override
         public String export(final Export_Util o, final VerbosityLevel level) {
+            final StringBuilder result = new StringBuilder();
             // FIXME: Make a real proof?
-            return "Represented integers and predefined function symbols by Terms";
+            result.append("Represented integers and predefined function symbols by Terms");
+            if (this.freeVarFilter != null && !this.freeVarFilter.isEmpty()) {
+                result.append(o.linebreak());
+                result.append("The following positions were removed because they contain free variables:");
+                result.append(o.linebreak());
+                for (final Map.Entry<FunctionSymbol, Collection<Integer>> entry : this.freeVarFilter.entrySet()) {
+                    result.append("function symbol: " + entry.getKey().getName() + ", removed positions: "
+                            + entry.getValue());
+                    result.append(o.cond_linebreak());
+                }
+            }
+            return result.toString();
         }
 
         @Override
