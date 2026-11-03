@@ -48,6 +48,11 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
     // Properties
     // ================================================================================
 
+    /**
+     * When do we want to be applicable?
+     */
+    private final Applicability apply;
+
     private final boolean tempFilter;
     private final UserStrategy strategy;
     private final int time;
@@ -57,6 +62,7 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
     // ================================================================================
     @ParamsViaArgumentObject
     public IDPRemoveTermProcessor(final Arguments arguments) {
+        this.apply = arguments.apply;
         this.tempFilter = arguments.tempFilter;
         this.strategy = arguments.strategy;
         this.time = arguments.time;
@@ -74,7 +80,59 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
         final IDPRuleAnalysis ruleA = iDP.getRuleAnalysis();
 
         // IRSs work on unbounded integers
-        return !ruleA.hasRestrictedInt();
+        if (ruleA.hasRestrictedInt()) {
+            return false;
+        }
+        switch (this.apply) {
+        case ALWAYS:
+            return true;
+        case INTONLY:
+            return IDPRemoveTermProcessor.isIntOnly(iDP);
+        case NOTINTONLY:
+            return !IDPRemoveTermProcessor.isIntOnly(iDP);
+        default:
+            throw new aprove.verification.oldframework.Exceptions.NotYetHandledException("Check for "
+                    + this.apply + " not handled yet!");
+        }
+    }
+
+    /**
+     * Checks the condition of {@link Applicability#INTONLY}.
+     */
+    private static boolean isIntOnly(final IDPProblem iDP) {
+        final IDPPredefinedMap predefinedMap = iDP.getRuleAnalysis().getPreDefinedMap();
+        for (final FunctionSymbol sym : IDPRemoveTermProcessor.getArgumentSymbols(iDP.getP())) {
+            final PredefinedFunction<? extends Domain> func = predefinedMap.getPredefinedFunction(sym);
+            // Constructors and bitwise operations would be replaced by
+            // fresh variables
+            if (!predefinedMap.isPredefined(sym) || (func != null && func.isBitwise())) {
+                return false;
+            }
+            // The IRS backend only approximates / and %, so problems
+            // that depend on them are left to the IDP processors
+            if (predefinedMap.isDivOrMod(sym)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * @return the function symbols that occur below the root symbols of the
+     *         rules
+     */
+    private static Set<FunctionSymbol> getArgumentSymbols(final Collection<GeneralizedRule> rules) {
+        final Set<FunctionSymbol> symbols = new LinkedHashSet<>();
+        for (final GeneralizedRule rule : rules) {
+            for (final TRSTerm side : Arrays.asList(rule.getLeft(), rule.getRight())) {
+                if (side instanceof TRSFunctionApplication) {
+                    for (final TRSTerm arg : ((TRSFunctionApplication) side).getArguments()) {
+                        symbols.addAll(arg.getFunctionSymbols());
+                    }
+                }
+            }
+        }
+        return symbols;
     }
 
     // ================================================================================
@@ -309,7 +367,36 @@ public class IDPRemoveTermProcessor extends IDPProcessor {
     // Arguments Class
     // ================================================================================
 
+    /**
+     * When the processor is applicable.
+     */
+    public static enum Applicability {
+        /**
+         * Always (for unbounded integers). Nested terms that an IRS cannot
+         * express, such as constructor terms, are replaced by fresh variables.
+         */
+        ALWAYS,
+
+        /**
+         * Only if nothing but variables and predefined operations occurs
+         * below the root of the P rules, so no term has to be replaced by a
+         * fresh variable. Bitwise operations are excluded as they would be
+         * replaced, and / and % because the IRS backend only approximates
+         * them.
+         */
+        INTONLY,
+
+        /**
+         * Only if INTONLY does not apply. A strategy can then treat the
+         * two cases differently without converting the same IDP twice.
+         */
+        NOTINTONLY,
+    }
+
     public static class Arguments {
+        // when do we want to be applicable?
+        public Applicability apply = Applicability.ALWAYS;
+
         /**
          * Whether the IRS is only used to remove nodes from the IDP. If true,
          * `strategy` is executed on the IRS and the nodes whose rules it
